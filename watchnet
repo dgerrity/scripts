@@ -1,0 +1,118 @@
+#!/bin/bash
+###############################################################################
+# Watchnet -- looks for network problems
+
+[[ -s /Users/dan/.bashrc ]] && source /Users/dan/.bashrc
+[[ -s /Users/dan/.addresses ]] && source /Users/dan/.addresses
+
+###############################################################################
+# Initialization
+
+logf=/Users/dan/Library/Logs/com.centvc.log
+monlog=/Users/dan/Library/Logs/com.centvc.routemon.log
+lock="/var/tmp/$(basename $0).lock"
+
+###############################################################################
+# Functions
+
+function enter() {
+#   For debugging and profiling purposes
+    if [[ ${o_verbose} ]]; then
+	ln=${2}; fn=${1}; shift; shift;
+	printf "Line %3s, %s" ${ln} ${fn}
+	[[ "$@" != "" ]] && echo "( $(echo $@ | sed 's/ /, /g') )" || echo
+    fi
+}
+
+function grr() {
+#   Outputs a growl message (if growl is installed)
+    [[ -z ${o_growl} ]] && return 0
+    [[ -n $(ps ax | grep GrowlHelper | grep -v grep) ]] && growl "$@"
+}
+
+function log() {
+    echo "$(date "+%Y-%m-%d %H:%M:%S") $(basename $0) $@" >> "${logf}"
+}
+
+function announce() {
+    msg="PID $$ executed by $(/bin/ps -p $PPID -o args=): $@"
+    [[ -n "${PS1}" ]] && echo "${msg}"
+    grr "${msg}"
+    log "${msg}"
+}
+
+function vecho()     { [[ ${o_verbose} ]]    && echo "$@";     }
+function vlog()      { [[ ${o_verbose} ]]    && log "$@";      }
+function vechonr()   { [[ ${o_verbose} ]]    && echo -en "$@"; }
+function vgrr()      { [[ ${o_verbose} ]]    && grr "$@";      }
+function vannounce() { [[ ${o_verbose} ]]    && announce "$@"; }
+function decho()     { [[ ${o_debug}   ]]    && echo "$@";     }
+function don()       { [[ ${o_debug}   ]]    && set -x;        }
+function doff()      { [[ ${o_debug}   ]]    && set +x;        }
+
+function getLock() {
+    enter $FUNCNAME $LINENO "$@"
+    if [[ -a "${lock}" ]]; then announce "Exiting -- lock file exists."; exit 1; fi
+    trap 'rm -f "${lock}"; log "aborted."; exit 1' INT TERM HUP KILL
+    trap 'rm -f "${lock}"; exit 0' EXIT
+    lockfile -r 2 "${lock}"
+}
+
+function getPNandMsg() {
+######## FIX ME #########
+    if [[ -z $(echo ${1} | grep "[[:digit:]]*\.*") ]]; then add="inet"
+    fi
+#   Get the address or fqn of the server we can't reach    
+    svr=$(echo ${1} | sed -e 's/\.//g' -e 's/[[:digit:]]*//')
+#   Try to get the name of the process that's using it
+    pn=$(lsof -i | grep -m 1 ${1} | awk '{print $1}')
+#   Construct a message and pick the appropriate list
+    msg=".watchnet: Adding "
+    if [[ -z ${svr} ]]; then
+	msg="${msg} ip address"
+	list="~/.missingips"
+    else
+	msg="${msg} server"
+	list="~/.serverlist"
+    fi
+    msg="${msg} ${svr}"
+    [[ -n ${pn} ]] && msg="${msg} (used by ${pn})"
+    msg="${msg} to the list."
+}
+
+function mainprog() {
+    log "starting"
+    getLock
+    log "current list of servers: $(cat ~/.serverlist)"
+    log "starting route monitor in the background"
+    route -n monitor > "${monlog}" &
+    log "wireless gateway is ${AirPort_gw}"
+    while true; do
+	if [[ -s "${monlog}" ]]; then  # If there are entries in the monitor file
+	# then for each unique appearance of RTM_LOSING
+	    for i in $(grep -A5 RTM_LO "${monlog}" | grep "^ " | grep -v ${AirPort_gw} | \
+		awk '{print $1}' | sort | uniq); do
+		announce "losing ${i}"
+#		getPNandMsg ${i}
+#		if [[ -z $(grep ${i} ${list}) ]] then
+#		    echo ${i} >> ${list}
+#		    growl ${msg};
+#		    logger ${msg}
+#		    sort ${list} | uniq > .sl.tmp && mv .sl.tmp ${list}
+#		    rm ${monlog}
+#		fi
+	    done
+	    rm "${monlog}"
+	fi
+	sleep 120
+    done
+}
+
+o_debug=; o_verbose=; o_growl=; o_blue=;
+if [[ "${1}" == "-d" ]]; then o_verbose="t"; o_debug="t"; fi
+[[ "${1}" == "-v" ]] && o_verbose="t"
+[[ "$(which growl)" != ""  ]] && o_growl="t"
+[[ "$(which blueutil)" != "" ]] && o_blue="t"
+
+mainprog
+

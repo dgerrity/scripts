@@ -1,0 +1,144 @@
+#!/opt/local/bin/bash
+
+###############################################################################
+# Hang - a script to guide guessing letters on partial words
+#
+# $Source: /Users/dan/bin/RCS/hang-v $
+# $Date: 2013-06-07 19:42:14-07 $
+# $Revision: 1.8 $
+###############################################################################
+
+# Make sure control-c during a subprocess terminates this script as well
+trap exit INT
+
+function self-solve() {
+    len=${#1}
+    for ((i=0; i<$len; i++)); do
+	[[ $(echo ${1:i:1} | grep "[aeiou]") ]] && let lastv=i
+    done
+    pat=
+    for ((i=0; i<len; i++)); do
+	[[ ${1:i:1} == ${1:lastv:1} ]] && pat="${pat}${1:lastv:1}" || pat="${pat}."
+    done
+    badguesses=""
+    let attempts=1
+    while [[ $(echo ${pat} | grep "\.") ]]; do
+	hangs "${pat}" "${badguesses}" > /dev/null
+	[[ ! -s ~/.tmp2 ]] && echo "cannot be solved" && return
+	best=$(sort -nr ~/.tmp2 | head -n 1 | awk '{print $2}'); rm -f ~/.tmp; rm -f ~/.tmp2
+	echo -en "Trying ${best} against ${pat} "
+	oldpat="${pat}"
+	for ((i=0; i<len; i++)); do
+	    [[ ${1:i:1} == ${best} ]] && pat="${pat:0:i}${best}${pat:i+1}"
+	done
+	echo ${pat}
+	[[ "${oldpat}" == "${pat}" ]] && badguesses="${badguesses}${best}"
+	let attempts++
+    done
+    echo "${attempts} attempts."
+}
+    
+function hang() {
+    [[ ${#1} -ne 12 ]] && echo "check input" && return
+    echo "shorts" 1>&2
+    shorts="$(scrab ${1} -n -l4)"
+    echo "longs" 1>&2
+    longs="$(scrab ${1} -n -l8 -L8)"
+    echo "${shorts}" "${longs}" | while read line; do
+	    echo -en . 1>&2
+	    let score=5
+	    let len=${#line}
+
+	    score=$(( 2 * (score + len - 4) ))
+
+	    lv=$(echo ${line} | sed 's/.*\([aeiou]\).*/\1/')
+	    [[ $(echo ${line} | grep ".*${lv}.*${lv}.*") ]] && let score-=5
+	    [[ $(echo ${line} | grep ".*[srt].*[str].*") ]] && let score-=5
+
+	    sedstr="sed "
+	    for ((i=0; i<len; i++)); do
+		sedstr="${sedstr} -e 's/.*${line:i:1}.*${line:i:1}.*//'"
+	    done
+	    [[ $(eval "echo ${line} | ${sedstr}") ]] && let score++
+
+	    [[ $(echo ${line} | grep ".*ing$\|ion$\|s$") ]] && let score--
+	    rest=$(echo ${line} | sed 's/[qjxz]//g')
+	    let rest=${#rest}
+	    score=$(( score + (3 * (rest - len)) ))
+	    rest=$(echo ${line} | sed 's/[rst]//g')
+	    let rest=${#rest}
+	    score=$(( score - (3 * (rest - len)) ))
+
+	    rest=$(echo ${line} | sed 's/[lotnraise]//g')
+	    let rest=${#rest}
+	    score=$(( score + rest - len ))
+
+	    echo ${score} ${line}
+
+    done | sort -n
+}
+
+function hangs() {
+    [[ ${2} ]] && grepstr="[${2}${3}${4}]" || grepstr=""
+    known=""
+    for ((i=0; i<${#1}; i++)); do
+	[[ ${1:i:1} == "." ]] && continue || known="${known}${1:i:1}"
+	bar=$(echo ${1} | sed "s/${1:i:1}//g")
+	let num=$(( ${#1} - ${#bar} ))
+	[[ num -eq 1 ]] && grepstr="${grepstr}\\|.*${1:i:1}.*${1:i:1}.*"
+	[[ num -eq 2 ]] && grepstr="${grepstr}\\|.*${1:i:1}.*${1:i:1}.*${1:i:1}.*"
+	[[ num -eq 3 ]] && grepstr="${grepstr}\\|.*${1:i:1}.*${1:i:1}.*${1:i:1}.*${1:i:1}.*"
+    done
+    [[ ! ${2} ]] && grepstr="${grepstr:3}"
+    dict=${DEFAULT_DICT:-/usr/share/dict/words}
+    rm -f ~/.tmp
+    echo "${DEFAULT_DICT}" | tr "|" "\n" | while read dict; do
+	grep -ix "${1}" "${dict}" | tr [A-Z] [a-z] | grep -v "${grepstr}" | sort | uniq >> ~/.tmp
+    done
+    cat ~/.tmp
+    list=$(echo "a b c d e f g h i j k l m n o p q r s t u v w x y z" | \
+	sed "s/[${known}${2}${3}${4}]//g")
+    for i in ${list}; do
+	printf "%3d %s\n" $(grep -ic ${i} ~/.tmp) ${i} >> ~/.tmp2
+    done
+    cols=${COLUMNS:-80}
+    sort -nr ~/.tmp2 | grep -v " 0 " | column -c ${cols}
+}
+
+function convertNums() {
+    pat="$(echo ${1} | sed 's/0//g')"
+    testpat=$(echo "${1}" | sed 's/[1-7]//g')
+    if [[ ${#1} -ne ${#testpat} ]]; then
+	sub=""
+	for ((i=1; i<7; i++)); do
+	    sub="${sub}."
+	    pat=$(echo "${pat}" | sed "s/${i}/${sub}/g")
+	done
+    fi
+}
+
+set -o noglob
+TIMEFORMAT="%R"
+rm -f ~/.tmp
+rm -f ~/.tmp2
+convertNums ${1}
+[[ (${#pat} -lt 2) || (${#pat} -gt 12) ]] && echo "warninginput"
+shift
+if [[ $(echo ${pat} | grep "\.") ]]; then
+    hangs ${pat} $*
+    best=$(sort -nr ~/.tmp2 | head -n 1 | awk '{print $2}'); rm -f ~/.tmp; rm -f ~/.tmp2
+    echo -en "${best} > "
+    hangs ${pat} ${*}${best} > /dev/null
+    next=$(sort -nr ~/.tmp2 | head -n 1 | awk '{print $2}'); rm -f ~/.tmp; rm -f ~/.tmp2
+    echo -en "${next} > "
+    hangs ${pat} ${*}${best}${next} > /dev/null
+    next=$(sort -nr ~/.tmp2 | head -n 1 | awk '{print $2}'); rm -f ~/.tmp; rm -f ~/.tmp2
+    echo "${next}"
+elif [[ ${#pat} -lt 12 ]]; then
+    self-solve ${pat}
+else
+    time hang ${pat}
+fi
+rm -f ~/.tmp
+rm -f ~/.tmp2
+set +o noglob

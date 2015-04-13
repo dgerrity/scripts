@@ -1,0 +1,41 @@
+#!/usr/bin/env /opt/local/bin/python
+
+###############################################################################
+#
+# inline - a script to convert embedded style sheets in html files into
+# inline HTML.  Evernote won't accept embedded style sheets.
+#
+# $Id: inline-v 1.5 2013-07-17 22:10:45-07 dan Exp $
+#
+###############################################################################
+
+import pynliner
+import sys
+import logging
+import StringIO
+
+def createLog():        # For debugging purposes
+    log = logging.getLogger('debuglog')
+    log.setLevel(logging.DEBUG)
+
+    log.logstream = StringIO.StringIO()
+    handler = logging.StreamHandler(log.logstream)
+
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    formatter = logging.Formatter(log_format)
+    handler.setFormatter(formatter)
+
+    log.addHandler(handler)
+    return log
+
+log=createLog()
+try:
+    result = pynliner.fromString(sys.stdin.read(),log=log)
+except:
+    print "Error trying to inline the specified style sheet"
+    sys.stderr.write(log.logstream.getvalue())
+    sys.exit(1)
+
+inlined = result.split("</body>")
+sys.stdout.write(inlined[0] + "<hr /><p><br><p>\n</body>" + inlined[1])
+

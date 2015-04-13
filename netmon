@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+###############################################################################
+# A simple script to monitor global ipv4 events on a mac and spit out changes
+#
+# $Id: netmon-v 1.2 2014-08-18 14:03:11-07 dan Exp dan $
+#
+###############################################################################
+
+from Foundation import *
+from SystemConfiguration import *
+import time
+
+def callback(store, keys, info):
+  for key in keys:
+    now=datetime.date.today()
+    print #!/usr/bin/python
+
+from Foundation import *
+from SystemConfiguration import *
+
+def callback(store, keys, info):
+  for key in keys:
+    print time.strftime("%Y-%m-%d %H:%M:%S"), key, SCDynamicStoreCopyValue(store, key)
+
+store = SCDynamicStoreCreate(None, 
+                             "global-network-watcher",
+                             callback,
+                             None)
+SCDynamicStoreSetNotificationKeys(store,
+                                  None,
+                                  ['State:/Network/Global/IPv4'])
+CFRunLoopAddSource(CFRunLoopGetCurrent(),
+                   SCDynamicStoreCreateRunLoopSource(None, store, 0),
+                   kCFRunLoopCommonModes)
+CFRunLoopRun()

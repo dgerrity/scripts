@@ -1,0 +1,202 @@
+#!/usr/bin/env python
+
+""" mden [[-i] file.md]
+
+Runs markdown on file.md, inlines any embdded css, and adds the html version in Evernote 
+with the source file attached.  If no file is specified stdin will be used and the
+source will not be attached.  Maps the following multimarkdown keywords:
+
+Title: ==> Title of the Evernote note
+Keywords: ==> Evernote Tags
+Notebook: ==> Evernote Notebook name
+"""
+
+###############################################################################
+#
+# mden - a python script to push a multimarkdown file into evernote
+#
+# $Source: /Users/dan/bin/RCS/mden-v $
+# $Rev:$
+#
+###############################################################################
+
+import sys
+import getopt
+import StringIO
+import re
+from os import path
+
+from datetime import date
+from subprocess import Popen, PIPE
+
+from Foundation import *
+from ScriptingBridge import *
+import pynliner
+import logging
+
+class Usage(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+def getMD( filename ):
+    fh = open( filename, 'r' )
+    theMDString = fh.read()
+    fh.close()
+    return theMDString
+
+def extractTitle(theMDString):
+    curDate = date.today()
+    dateFormatter=NSDateFormatter.alloc().init()
+    dateFormatter.setDateStyle_(NSDateFormatterLongStyle)
+    dateFormatter.setTimeStyle_(NSDateFormatterShortStyle)
+    defaultTitle = dateFormatter.stringFromDate_(curDate)
+
+    theTitle = defaultTitle
+    t_re = re.compile(r'^Title:\s+(.*)')
+    r = t_re.search(theMDString)
+    if r:
+        theTitle = r.group(1)
+    return theTitle
+    
+def extractTags(theMDString):
+    theTags = []
+    t_re = re.compile(r'Keywords:\s+(.*)$')
+    r = t_re.search(theMDString)
+    if r:
+        theTags = r.group(1).split(',')
+        theTags = [x.strip() for x in theTags]
+    return theTags
+
+def extractNotebook(theMDString):
+    theNotebook = None
+    t_re = re.compile(r'Notebook:\s+(.*)$')
+    r = t_re.search(theMDString)
+    if r:
+        theNotebook = r.group(1).strip()
+    return theNotebook
+
+def createLog():    # For debugging purposes
+    log = logging.getLogger('debugLog')
+    log.setLevel(logging.DEBUG)
+
+    log.logstream = StringIO.StringIO()
+    handler = logging.StreamHandler(log.logstream)
+
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    formatter = logging.Formatter(log_format)
+    handler.setFormatter(formatter)
+
+    log.addHandler(handler)
+    return log
+
+def inlineHtml(theHtmlString):
+    log=createLog()
+    result = "An error occurred while trying to inline the html."
+    try:
+        result = pynliner.fromString(theHtmlString,log=log)
+    except:
+        print "Error trying to inline the specified style sheet"
+        sys.stderr.write(log.logstream.getvalue())
+        sys.exit(1)
+    return result
+
+def processMMD(theMDString):
+    p1 = Popen("multimarkdown", stdin=PIPE, stdout=PIPE)
+    theHtml = p1.communicate(input=theMDString)[0]
+    return theHtml
+    
+def realmain(filename, infile, verbose=False):
+    if verbose:
+        print 'Starting to process ' + filename
+
+    theMDString = infile.read()
+
+    noteTitle = extractTitle(theMDString)
+    if verbose:
+        print 'Note title will be ', noteTitle
+
+    noteTags = extractTags(theMDString)
+    if verbose:
+        print 'Note tags will be ', noteTags
+
+    noteNotebook = extractNotebook(theMDString)
+    if verbose:
+        print 'Notebook will be ', noteNotebook
+
+    noteAttachments = None
+    if filename is not '(stdin)':
+        noteAttachments = [ filename ]
+    if verbose:
+        print 'Attachment will be ', noteAttachments
+
+    cssString = processMMD(theMDString)
+    baseHtml = inlineHtml(cssString).split("</body>")
+    if len(baseHtml) > 1:
+        theHtmlString = baseHtml[0] + "<hr /><p><br><p>\n</body>" + baseHtml[1]
+    else:
+        theHtmlString = baseHtml
+    
+    evernote = SBApplication.applicationWithBundleIdentifier_("com.evernote.Evernote")
+    evernote.synchronize()
+    rc = evernote.createNoteFromFile_fromUrl_withText_withHtml_withEnml_title_notebook_tags_attachments_created_( \
+        None,            #From File   \
+        None,            #From URL    \
+        None,            #With Text   \
+        theHtmlString,   #With HTML   \
+        None,            #With ENML   \
+        noteTitle,       #title       \
+        noteNotebook,    #notebook    \
+        noteTags,        #tags        \
+#       noteAttachments, #attachments \
+        None,            #attachments \
+        None)            #created
+
+    print 'Processed ', filename
+    evernote.synchronize()
+    return rc
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    try:
+        try:
+            opts, args = getopt.getopt(argv[1:], "hi:vt:", ["help", "input=", "verbose"])
+        except getopt.error, msg:
+             raise Usage(msg)
+
+        # option processing
+        verbose = False
+        files = None
+        for option, value in opts:
+            if option in ("-v", "--verbose"):
+                verbose = True
+            if option in ("-h", "--help"):
+                raise Usage(__doc__)
+            if option in ("-i", "--input"):
+                print 'input filename specified as ',value
+                files = value
+
+        if files is None:
+            if len(args) > 0:
+                files = args
+        if files is None:
+            files = ['(stdin)']
+
+        for f in files:
+            if f is not '(stdin)':
+                filename = path.abspath(f)
+                infile = open( filename, 'r' )
+                realmain(filename, infile, verbose)
+                infile.close()
+            else:
+                realmain('(stdin)', sys.stdin, verbose)
+
+    except Usage, err:
+        print >>sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
+        print >>sys.stderr, "For help use --help"
+        return 2
+
+if __name__ == "__main__":
+    sys.exit(main()) 
+
+

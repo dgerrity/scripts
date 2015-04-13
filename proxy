@@ -1,0 +1,120 @@
+#!/opt/local/bin/bash
+###############################################################################
+# 
+# proxy - a script to setup SOCKS proxy and homesharing connections
+#
+# $Source: /Users/dan/bin/RCS/proxy-v $
+# $Date: 2013-06-28 15:17:26-07 $
+# $Revision: 1.6 $
+#
+###############################################################################
+
+###############################################################################
+# Functions
+
+function grr() {
+#   Outputs a growl message (if growl is installed)
+    [[ ${o_growl} ]] && \
+	growlnotify --appIcon Network\ Utility ${me} -d ${me} -m "$@"
+}
+
+function print()     { [[ ${PS1} ]] && echo "$@"; }
+function announce()  { print "$@"; grr "$@"; log "$@"; }
+function printlog()  { print "$@"; log "$@"; }
+
+function getFreePort() {
+    freeport=$(( 100+( $(od -An -N2 -i /dev/random) )%(60000-1024+1) ))
+    port2=$(( freeport + 1 ))
+    while [[ ($(grep "${freeport}\|${port2}" /etc/services | grep -v Unassigned)) || \
+	($(lsof -i:${freeport},${port2})) ]]; do
+	print ${freeport} is busy
+	freeport=$(( 100+( $(od -An -N2 -i /dev/random) )%(60000-1024+1) ))
+	port2=$(( freeport + 1 ))
+    done
+    echo ${freeport}
+}
+
+function waitForProxyServer() {
+    count=0
+    while (( count++ < 5 )); do
+	[[ ! $(scutil -r ${proxyserver} | grep -i not) ]] && break
+	log "Waiting for ${proxyserver}, try ${count}"
+	sleep 2
+    done
+    if (( count == 6 )); then
+	announce "proxy server \"${proxyserver}\" not reachable, aborting."
+	exit 2
+    fi
+}
+
+function waitForSSID() {
+    count=0
+    while (( count++ < 5 )); do
+	ssid=$(airport -I | sed -n '/ SSID: /s/^.* SSID: //p')
+	[[ ${ssid} ]] && break
+	log "Waiting for ssid, try ${count}"
+	sleep 3
+    done
+    if [[ ! ${ssid} ]]; then
+	announce "no SSID available, check airport, aborting."
+	exit 3
+    fi
+}
+
+###############################################################################
+# Code
+
+[[ -e /Users/dan/.bashrc ]] && . /Users/dan/.bashrc
+me=$(basename $0)
+proxyserver=${proxy:-sierra.dnsdojo.com}
+port=${proxyport:-34343}
+o_growl=$(/usr/bin/which growlnotify)
+[[ ${1} ]] && proxyserver=${1}
+[[ ${2} ]] && port=${2}
+[[ ! $(echo ${proxyserver} | sed 's/[a-z]//g') ]] && proxyserver=${!proxyserver}
+[[ ! $(scutil -r ${proxyserver}) ]] && echo "Cannot reach ${proxyserver}." && exit 1
+
+log "${me}>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+log "PID $$ executed by $(/bin/ps -p $PPID -o args=)"
+
+if [[ "${1:0:1}" == "-" ]]; then
+    print "Usage: ${me} [proxyserver [port]]"
+    print "Default is ${proxy} on port ${proxyport}."
+    print "Uses environment variables \"proxy\" and \"proxyport\" if omitted."
+    exit 1
+fi
+
+echo "Opening SOCKS5 proxy connection to ${proxyserver} on ${proxyport}."
+
+waitForSSID
+waitForProxyServer
+
+if [[ $(/usr/bin/which autossh) ]]; then 
+    o_auto=true; 
+    monport=$(getFreePort ${proxyserver}); 
+fi
+if [[ ! $(ps ax | grep "[s]sh.*${port}") ]]; then
+    waitForProxyServer
+    if [[ ! $(scutil -r ${proxyserver} | grep -i not) ]]; then
+	log "establishing proxy on port ${port} through ${proxyserver}"
+	[[ ${o_auto} ]] && autossh -M ${monport} -f -ND ${port} ${proxyserver} -f || \
+	    ssh -fND ${port} ${proxyserver}
+	[[ ! "$?" ]] && announce "ssh to ${proxyserver} failed; o_auto is \"${o_auto}\"."
+    else
+	announce "server ${proxyserver} is not reachable."
+	exit 1
+    fi
+else
+    printlog "already running on port ${port}."
+fi
+
+if [[ ! $(ps ax | grep "[P]roxifier") ]]; then
+    announce "launching proxifier"
+    open -a Proxifier
+fi
+
+log "auto: $(ps axo command | grep "[a]utossh" | tr -s ' ')"
+log "ssh:  $(ps axo command | grep "[s]sh .*34343" | grep -v "auto" | sed -e 's/^.*ssh .*-ND /ssh /')"
+log "Proxyfier:  $(ps axo command | grep -o "[P]roxifier .*")"
+log "normal exit."
+exit 0

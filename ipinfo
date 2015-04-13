@@ -1,0 +1,306 @@
+#!/bin/bash
+
+###############################################################################
+# ipinfo
+# Displays useful information about the current network location
+#
+# $Id: ipinfo-v 1.29 2013-12-17 11:12:25-08 dan Exp $
+# $Revision: 1.29 $
+#
+###############################################################################
+
+[[ -e /Users/dan/.bashrc ]] && source /Users/dan/.bashrc || logger "No .bashrc"
+
+rsyncport=873
+
+[[ ! ${aptname} ]]    && export aptname="Wi-Fi"
+[[ ! ${aptdev} ]]     && export aptdev=en1
+[[ ! ${proxyport} ]]  && export proxyport=34343
+[[ ! ${proxy} ]]      && export proxy=sierra.dnsdojo.com
+[[ ! ${daapserver} ]] && export daapserver=sierra.dnsdojo.com
+
+###############################################################################
+# Functions
+
+# Default addresses for important machines 
+for i in romeo sierra cookie tango; do export "${i}"="${i}.dnsdojo.com"; done
+case "$(hostname -s)" in
+    sierra)  export proxy=romeo.dnsdojo.com; export proxyport=34345;;
+    zulu)   export aptdev=en0;;
+    *);;
+esac
+
+function elapsed() { echo $(( $(date -j -f "%a %b %d %T %Z %Y" "$(date)" "+%s") - starttime )); }
+function decho()   { [[ ${o_debug} ]] && echo "$(elapsed)" "  elapsed: $@"; }
+function vecho()   { [[ ${o_verbose} ]] && echo $@; decho $@; }
+
+function printl() {
+#   printl( str [str...] ); prints a formatted line
+    [[ ! ${2} ]] && return
+    title="${1}"; shift; val="${1}"; shift
+    [[ (${#val} -gt 17) && (${val:2:1} != ":") && (! ${o_markdown}) ]] &&  val="${val:0:13}..."
+    [[ "${o_markdown}" ]] && \
+	str=$(printf "| %-12s | %-18s | %-13s| %-10s| %-10s %s|" ${title} ${val} $*) || \
+	str=$(printf "%-12s %-17s %-13s %-10s %-10s %s" ${title} ${val} $*)
+    echo -e "${str}  "
+}
+
+function decimalMask() {
+#   decimalMask( 0xFFFFFF00 ); converts hex mask into decimal equivalent "255.255.255.0"
+    printf "%d.%d.%d.%d" $(echo ${1} | sed -e 's/0x//' -e 's/\(..\)/0x\1 /g')
+}
+
+function cidrMask() {
+#   cidrMask( 0xFFFFFF00 ); converts hex mask into cidr equivalent "/24"
+    local ones
+    ones=$(echo $(echo $(echo "16 i 2 o $(echo ${1:2} | tr [a-f] [A-F]) p" | dc)) | sed 's/0//g')
+    echo "${#ones}"
+}
+
+function fixmac() {
+    local ma=$(echo "${1}" | tr ':' ' ')
+    printf "%02s:%02s:%02s:%02s:%02s:%02s" ${ma}
+}
+
+function osxDeviceFromInterface() {
+#   osxDeviceFromInterface( en0 ); converts unix interface name to osx Device name
+#   Also formats name if it is longer than 8 characters
+    ab=$(networksetup -listnetworkserviceorder | sed -n "/Dev.*${1}/s/.*t: \(.*\),.*/\1/p")
+    [[ (! ${ab}) && (${i:0:4} == "utun") ]] && ab=vpn
+    [[ ${#ab} -gt 8 ]] && ab=$(echo ${ab} | sed 's/\(.......\).*\(...\)$/\1-\2/')
+    echo "${ab}"
+}
+
+function showServer() {
+#   showServer( fqn display-name [port] ); gets ip, gateway, and whether its reachable
+    decho showServer $@
+    local ri=$(route get ${1} 2>&1)
+    if [[ $(echo ${ri} | grep "bad") ]]; then
+	printl ${2}: ${1} cannot-resolve
+	return
+    fi
+    decho $(date) got route
+    local rch=$(scutil -r ${1} | sed 's/,.*$//' | tr [A-Z] [a-z])
+    if [[ "${rch}" == "not reachable" ]]; then
+	printl ${2}: ${1} not-reachable
+	return
+    fi
+    decho $(date) got reachability
+    local ip=$(echo ${ri} | grep route | sed 's/.*route to: \([.[:digit:]]*\).*/\1/')
+    [[ ! ${ip} ]] && ip=${1}
+    local gw=$(echo ${ri} | grep gateway | sed 's/.*gateway: \([.[:digit:]]*\).*/\1/')
+#   If there is an ip address but no gateway, its a local area machine
+    [[ (! ${gw}) && ( ${ip}) ]] && gw="local" || gw=${gw:-invalid}
+    decho $(date) figured out local or remote, calling nmap
+    [[ ${3} ]] && po=$(nmap -Pn -p ${3} ${1} | grep tcp | sed 's/.*tcp \(.*\) .*/\1/')
+    decho $(date) nmap done
+    printl ${2}: ${ip} ${gw} ${po} ${3}
+}
+
+function showInterfaces() {
+#   showInterfaces(); lists information about each interface that is up
+    rc=1
+    for i in $(ifconfig -lu | grep -o "en.\|utun."); do
+	decho "Checking interface ${i}"
+        line=$(ifconfig -m $i | grep "inet ")
+	[[ ! ${line} ]] && continue
+
+	rc=0
+        mask=$(cidrMask $(echo ${line} | grep -o "0x[0-9a-fA-F]*"))
+        [[ "${o_markdown}" ]] && \
+	    ip="**$(echo ${line} | awk '{print $2}')**/${mask}" || \
+	    ip="$(echo ${line} | awk '{print $2}')/${mask}"
+        gw=$(netstat -nrf inet | grep -m1 "^.*UGS.*${i}$" | awk '{print $2}')
+	ab="$(osxDeviceFromInterface ${i})"
+        [[ ${ab} ]] && printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${ip} ${gw} ${i}
+    done
+    return ${rc}
+}
+
+function showMACAddresses() {
+#   showMACAddresses(); lists information about each interface that is up
+    rc=1
+    for i in $(ifconfig -lu | grep -o "en."); do
+	ab="$(osxDeviceFromInterface ${i})"
+	[[ ! ${ab} ]] && continue
+
+	rc=0
+	decho "Checking interface ${i}"
+	mac="$(fixmac $(ifconfig -m ${i} | grep "ether [0-9]" | awk '{print $2}'))"
+	name="$(grep "${mac}" ${HOME}/.knownmacaddresses | cut -f2-10 -d' ')"
+	if [[ ("${name}") && "${o_markdown}" ]]; then mac="${mac} | $(echo -en ${name})"
+	elif [[ "${name}" ]]; then mac="${mac} $(echo -en ${name})"
+	fi
+	[[ "${o_markdown}" ]] && \
+	    printf "| %-12s | %17s | | | \n" "$(echo ${ab} | tr [A-Z] [a-z]):" "${mac}" || \
+	    printf "%-12s %-17s  \n" "$(echo ${ab} | tr [A-Z] [a-z]):" "${mac}"
+    done
+    mac="$(fixmac $(airport -I | grep " BSSID:" | awk '{print $2}'))"
+    name="$(grep "${mac}" ${HOME}/.knownmacaddresses | cut -f2-10 -d' ')"
+    if [[ ("${name}") && "${o_markdown}" ]]; then mac="${mac} | $(echo -en ${name})"
+    elif [[ "${name}" ]]; then mac="${mac} $(echo -en ${name})"
+    fi
+    [[ ${#mac} -gt 58 ]] && mac="$(echo ${mac} | cut -c 1-58)..."
+    [[ "${o_markdown}" ]] && \
+	printf "| %-12s | %-17s | | |  \n" "station-mac:" "${mac}" || \
+	printf "%-12s %-17s  \n" "station-mac:" "${mac}"
+    return ${rc}
+}
+
+function showSSID() {
+    rc=1
+    ssid="$(airport -I | grep " SSID:" | sed 's/.*SSID: //')"
+    if [[ ${ssid} ]]; then rc=0
+    elif [[ "$(airport -I)" == "AirPort: Off" ]]; then
+	ssid="${aptname}-is-off"
+    else
+	ssid="disconnected"
+    fi
+    [[ "${o_markdown}" ]] && \
+	str=$(printf "| %-12s | %-17s | | |" "ssid:" "${ssid}") || \
+	str=$(printf "%-12s %s" "ssid:" "${ssid}")
+    echo -e "${str}  "
+    [[ -e /etc/resolv.conf ]] && \
+	printl suffix: "$(cat /etc/resolv.conf | grep search | cut -f3-9 -d' ')"
+    return ${rc}
+}
+
+function showIfChanged() {
+    local o; local n
+    old=/tmp/ipinfo.old.txt
+    new=/tmp/ipinfo.new.txt
+    mainprog > ${new}
+    [[ ! -e ${old} ]] && touch ${old}
+    [[ $(diff -qb ${new} ${old}) ]] && cat ${new}
+    let i=0
+    while read line; do
+	let i++
+	cl="$(echo ${line} | tr -s "\t" | tr "\t" " " | tr -s " ")"
+	[[ "${cl:0:1}" == " " ]] && cl="${cl:1}"
+	if [[ $(echo ${line} | grep "gmail") ]]; then
+	    continue;
+	elif [[ $(echo ${line} | grep "|") ]]; then
+	    n="${n}|$(echo ${cl} | cut -f1 -d '|' | sed 's/ $//')"
+	    o="${o}|$(echo ${cl} | cut -f2 -d '|' | sed 's/ $//')"
+	elif [[ $(echo ${line} | grep "<") ]]; then
+	    n="${n}|$(echo ${cl} | cut -f1 -d '<' | sed 's/ $//')"
+	    o="${o}|removed"
+	elif [[ $(echo ${line} | grep ">") ]]; then
+	    n="${n}|removed"
+	    o="${o}|$(echo ${cl} | cut -f2 -d '>' | sed 's/ $//')"
+	fi
+    done < <(diff -wByb --left-column --suppress-common-lines ${new} ${old})
+    for ((j=0; j<i; j++)); do
+	log "old: $(echo ${o} | cut -f $(( i+1 )) -d '|')"
+	log "new: $(echo ${n} | cut -f $(( i+1 )) -d '|')"
+    done
+    mv ${new} ${old}
+    return 0
+}
+
+function mainprog() {
+#   Print markdown header if so desired
+    if [[ "${o_markdown}" ]]; then
+	echo -e "Marked Style: Swiss  "
+        echo -e "# $(hostname -s) $(date "+%Y-%m-%d %H:%M:%S")  "
+	echo -e "_called by ${whorang}_  \n"
+	echo "| &nbsp; |&nbsp; |&nbsp; |&nbsp; |&nbsp; |"
+	echo "|:------|:------|:------|:------|:------|"
+    fi
+#   Show OS X network location information
+    osxnl=$(scselect 2>&1 | grep " \*" | sed 's/.*(\(.*\))$/\1/')
+    [[ ("${osxnl}" == "Automatic") || ("${o_markdown}") ]] && \
+	printl osxloc: "${osxnl}" || \
+	printl osxloc: '\033[31;1m'"${osxnl}"'\033[0m'
+
+    printl host: ${HOSTNAME}
+
+
+#   SSID info
+    if ! showSSID; then
+	log "problem with ssid ${ssid}"
+	ssid=
+    fi
+
+    if ! showInterfaces; then
+	printl interfaces no-ip-addresses
+	log "early exit due  to no ip4 addresses assigned, rc=3"
+	exit 3
+    fi
+
+#   Check to see if important ports are blocked
+    showServer imap.gmail.com "gmail" 993
+    showServer smtp.gmail.com "mts/smtp" 587
+    showServer rsync.macports.org "rsync" ${rsyncport}
+
+#   Check to see if the SOCKS proxy is active
+    if [[ ${proxyport} ]]; then
+	[[ $(ps ax | grep "[^o][s]sh.*${proxyport}") ]] && \
+	    act="active" || act="inactive"
+	[[ $(ps ax | grep "[o]ssh.*${proxyport}") ]] && act="active (auto)"
+	rch="$(scutil -r ${proxy} | sed -e 's/,.*$//' -e 's/^R/r/')"
+	printl proxy: ${proxy_ip} ${proxy_gw} ${rch} ${act}
+    else
+	printl proxy: "n/a"
+    fi
+    [[ $(ps ax | grep "[P]roxifier") ]] && \
+	printl proxyifer: active || printl proxyfier: inactive
+
+#   Get public IP address
+    str="unavailable"
+    if ! host -t A checkip.dyndns.org > /dev/null; then str="cannot-find";
+    elif ! ping -c2 -t5 google.com &> /dev/null; then str="cannot-ping";
+    elif nmap -p80 checkip.dyndns.com | grep open > /dev/null; then
+	str=$(curl -m 2 -s http://checkip.dyndns.org | grep "Current IP Address")
+	[[ ${str} ]] && \
+	    str=$(echo ${str} | sed 's/.*s: \([0-9\.]*\)<.*/\1/') || \
+	    str="intercepted"
+    fi
+    printl public: ${str}
+
+    if ! showMACAddresses; then
+	printl interfaces no-MAC-Addresses
+	log "early exit due  to no MAC addresses in use, rc=4"
+	exit 4
+    fi
+
+#    printl bandwidth: $(printf "%'d" $(iperf -c ${proxy} -yc | sed 's/.*,//'))
+}
+
+
+function usage() {
+    echo "usage: ${0} [options]"
+    echo "    -v : verbose"
+    echo "    -d : debug"
+    echo "    -m : format output as markdown"
+    echo "    -n : show only new information"
+    exit 1
+}
+
+###############################################################################
+# CODE
+###############################################################################
+
+let starttime=$(date -j -f "%a %b %d %T %Z %Y" "$(date)" "+%s")
+whorang="$(ps -o pid=,command= -p $PPID | sed -e 's/^[-\.]//' | sed 's#/bin/bash ##')"
+
+o_debug=; o_verbose=; o_markdown=
+rc=0
+while getopts ":dvnm" option; do
+    case ${option} in
+	d) o_verbose=t; o_debug=t;;
+	v) o_verbose=t;;
+	n) showIfChanged; exit ${rc};;
+	m) o_markdown=t;;
+	*) usage;;
+    esac
+done
+
+TIMEFORMAT="%R seconds"
+[[ ${o_debug} ]] && time mainprog || mainprog
+[[ ${rc} != 0 ]] && log "exit with rc ${rc}"
+let stoptime=$(date -j -f "%a %b %d %T %Z %Y" "$(date)" "+%s")
+log "$(( stoptime - starttime )) seconds"
+decho "$(( stoptime - starttime )) seconds"
+exit 0
+

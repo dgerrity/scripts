@@ -1,0 +1,254 @@
+#!/bin/bash
+
+##############################################################################
+# iTunes Command Line Control
+# Based on the original script by David Schlosnagle
+#
+# $Source: /Users/dan/bin/RCS/itunes-v $
+# $Date: 2012-05-02 09:50:07-07 $
+# $Revision: 1.4 $
+#
+##############################################################################
+
+version=$(grep -m 1 Revision $0 | sed 's/...\(.*\)\$$/\1/')
+me=$(basename $0)
+
+showHelp () {
+    echo "iTunes Command Line Interface, version ${version}"
+    echo "Usage: ${me} [command [value]]"; echo
+    echo "Only one command may be issued at a time.  Except for \"quit\","
+    echo "iTunes will be launched if it is not running.  Many commands are"
+    echo "unavailable when iTunes is in the \"stopped\" state.  Use play"
+    echo "followed by pause to see that status in that event."; echo
+    echo "Volume values can be a number, up, down, on, off, +, or -, where"
+    echo "   the plus and minus are 10%, off is 0, and on is 50"; echo
+    echo "\"Name\" must be enclosed in quotes if it has spaces"; echo
+    echo "Commands (and abbreviations):"
+    echo " status    -s      = Shows iTunes' status, current artist and track."
+    echo " play      -p      = Start playing iTunes (and unmute)."
+    echo " playlist  -l name = Start first song in specified playlist."
+    echo " pause     -z      = Pause iTunes."
+    echo " next      -n      = Go to the next track."
+    echo " blend     -b      = Reduce volume, next track, raise volume."
+    echo " prev      -p      = Go to the previous track."
+    echo " mute      -m      = Mute iTunes volume (not computer)."
+    echo " unmute    -u      = Unmute iTunes volume."
+    echo " sysmute   -M      = Mute system volume (not iTunes)."
+    echo " sysunmute -U      = Unmute system volume."
+    echo " rate      -r val  = Rate the current song, number range is [0-5]."
+    echo " rate         verb = accepts up or down to move one star."
+    echo " genre     -g name = Change genre to name."
+    echo " vol       -v val  = iTunes vol, number range [0-100]."
+    echo " vol          verb = cmd is up, down, off, on (sets to 50)."
+    echo " sysvol    -V val  = System volume, number range [0-100]."
+    echo " sysvol       verb = cmd is up, down, off, on (sets to 50)."
+    echo " stop      -o      = Stop playing.  Pause is better."
+    echo " quit      -q      = Quit iTunes."
+    echo " remote    -t host = Execute command using ssh on remote machine."
+    echo " --version         = Show version."
+    echo
+    exit 0
+}
+
+# Shortcuts
+itprefix="osascript -e 'tell application \"iTunes\" to"
+sysprefix="osascript -e '"
+postfix="'"
+
+# Executes an osascript call to iTunes
+function it() {
+    eval "${itprefix} $* ${postfix}"
+}
+
+# Executes an osascript call to the system
+function sys() {
+    eval "${sysprefix} $* ${postfix}"
+}
+
+# Called when a command can't be executed in the current state
+function badState() {
+    state=$(it "player state as string")
+    echo "iTunes cannot be ${state} to execute this command."
+    exit 2
+}
+
+# Called to ensure iTunes is playing after a "play" command.
+function ensurePlaying() {
+    [[ $(it "player state as string") == "playing" ]] && return
+    echo "iTunes failed to start playing after the command."
+    echo "Setting playlist to \"Music\" and trying again."
+    $(it "play track 1 of playlist \"Music\"")
+    $(it "play"); $(it "set mute to false")
+    state=$(it "player state as string")
+    [[ "${state}" == "playing" ]] && return
+    echo "Play failed."
+}
+
+# Shows the current status of iTunes if it is not stopped.
+function showStatus() {
+    state="$(it "player state as string")"
+    printf "iTunes is %s\n" "${state}"
+    rawrating=$(it "get rating of current track")
+    l1="$(it "name of current track as string")"
+    l2="$(it "artist of current track as string")"
+    l3="$(it "album of current track as string")"
+    l4="$(it "get genre of current track as string")"
+    l5="$(it "get name of current playlist as string")"
+    l6="$(it "sound volume as integer")"
+    l7="$(sys "get (output volume of (get volume settings))")"
+    [[ ${l7} == "missing value" ]] && l7="controlled elsewhere"
+    printf "%s, "               "${l1}"
+    printf "by %s\n"            "${l2}"
+    printf "Album \"%s\", "     "${l3}"
+    printf "Genre \"%s\", "     "${l4}"
+    printf "Playlist "
+    printf "\"%s\"\n"           "${l5}"
+    printf "Rating %s, "        "$(( ${rawrating} / 20 ))"
+    printf "Volume %s, "        "${l6}"
+    printf "System volume %s\n" "${l7}"
+    exit 0
+}
+
+# Determines whether iTunes is running
+function running() {
+    [[ "$(ps ax | grep "iTunes\.app.*/iTunes " | grep -v grep)" != "" ]] \
+	&& return 0 || return 1
+}
+
+function checkSpecialCases() {
+    [[ ${1} == "--version" ]] && echo "${me} ${version}" && exit 0
+    [[ (${1} == "quit") && (! $(running)) ]] && echo "iTunes not running." && exit 0
+    if [[ (${1} == "remote") || (${1} == -t) ]]; then
+	if [[ ! ${2} ]]; then 
+	    echo "no remote host specified."; 
+	    exit 1;
+	elif [[ (${!2}) && ($(scutil -r ${!2} | grep -v Not)) ]]; then
+	    o_remote=${!2}
+	elif [[ (${2}) && ($(scutil -r ${2} | grep -v Not)) ]]; then
+	    o_remote=${2}
+	else
+	    echo "could not reach remote host ${2}"
+	fi
+    fi
+}
+
+# Look for --help, --version, remote host
+[[ ${1} ]] && checkSpecialCases "$@"
+
+# Deal with remote host
+if [[ ${o_remote} ]]; then
+    shift; shift;
+    echo "On ${o_remote}"
+    ssh ${o_remote} itunes "$@" | while read line; do 
+	[[ ${line} ]] && echo ${line}
+    done
+    exit 0
+fi
+
+# Allow getopts type processing, i.e., -r5 instead of -r 5
+if [[ ("${1}") && ("${1:0:1}" == "-") && (${#1} -gt 2) ]]; then
+    a1="${1:0:2}"; a2="${1:2}"
+else
+    a1="${1}"; a2="${2}"
+fi
+
+state=$(it "player state as string")
+
+case "${a1}" in
+    status|-s)    ;;
+
+    play|-p)      echo "Playing iTunes (and unmuting)."
+	          echo $(it "play"); echo $(it "set mute to false")
+		  ensurePlaying;;
+
+    playlist|-l)  [[ -z ${a2} ]] && showHelp
+	          echo "Playing named playlist ${a2}"
+		  $(it "play track 1 of playlist \"${a2}\"");;
+
+    genre|-g)     [[ -z ${a2} ]] && showHelp
+	          echo "Setting genre of current song to ${a2}"
+		  $(it "set genre of current track to \"${a2}\"");;
+
+    pause|-z)	  echo "Pausing iTunes."; $(it "pause");;
+
+    next|-n)	  [[ "${state}" != "playing" ]] && badState
+	          echo "Going to next track."; $(it "next track");;
+
+    blend|-b)     [[ "${state}" != "playing" ]] && badState
+	          echo "Blending to next track.";
+	          vol=$(it "sound volume as integer")
+		  incr=$(( vol/4 ))
+		  for ((i=vol-incr; i>0; i-=incr)); do 
+		      $(it "set sound volume to ${i}"); sleep 1
+		  done
+                  $(it "next track")
+		  for ((i=incr; i<=vol; i+=incr)); do 
+		      $(it "set sound volume to ${i}"); sleep 1
+		  done
+		  $(it "set sound volume to ${vol}");;
+
+    prev|-p)	  [[ "${state}" != "playing" ]] && badState
+ 	          echo "Going to previous track."; $(it "previous track");;
+
+    mute|-m)	  echo "Muting iTunes."; $(it "set mute to true");;
+
+    sysmute|-M)   echo "Muting system volume."
+   	          $(sys "set volume with output muted");;
+
+    unmute|-u)	  echo "Unmuting iTunes."; $(it "set mute to false");;
+
+    sysunmute|-U) echo "Umuting system volume."
+                  $(sys "set volume without output muted");;
+
+    vol|-v)	  vol=$(it "sound volume as integer")
+ 	          case "${a2}" in
+		      "up"|"+")     newvol=$(( vol+10 ));;
+		      "down"|"-")   newvol=$(( vol-10 ));;
+		      "off")        newvol=0;;
+		      "on")         newvol=50;;
+		      [[:digit:]]*) newvol="${a2}";;
+		      *)            showHelp;;
+		  esac
+		  [[ ${newvol} -gt 100 ]] && newvol=100
+		  [[ ${newvol} -lt 0 ]] && newvol=0
+		  echo "Setting volume to ${newvol}"
+		  $(it "set sound volume to ${newvol}");;
+
+    sysvol|-V)    vol=$(sys "get (output volume of (get volume settings))")
+ 	          case "${a2}" in
+                      "up"|"+")     newvol=$(( vol+10 ));;
+		      "down"|"-")   newvol=$(( vol-10 ));;
+                      "off")        newvol=0;;
+                      "on")         newvol=50;;
+                      [[:digit:]]*) newvol="${a2}";;
+		      *)            showHelp;;
+		  esac
+		  [[ ${newvol} -gt 100 ]] && newvol=100
+		  [[ ${newvol} -lt 0 ]] && newvol=0
+		  echo "Setting system volume to ${newvol}"
+		  $(sys "set volume output volume ${newvol}");;
+
+    stop|-o)	  echo "Stopping iTunes."; $(it "stop"); exit 0;;
+
+    rate|-r)      cr=$(( $(it "get rating of current track") / 20 ))
+	          case "${a2}" in
+                      "up"|"+")     newr=$(( cr+1 ));;
+		      "down"|"-")   newr=$(( cr-1 ));;
+                      [[:digit:]]*) newr="${a2}";;
+		      *)            showHelp;;
+		  esac
+		  [[ ${newr} -gt 5 ]] && newr=5
+		  [[ ${newr} -lt 0 ]] && newr=0
+		  echo "Setting rating to ${newr}."
+		  let newr*=20
+		  $(it "set rating of current track to ${newr}");;
+
+    quit|-q)	  echo "Quitting iTunes."; $(it "quit"); exit 0;;
+
+    --version)    echo "itunes version ${version}"; exit 0;;
+
+    "")           ;;
+    *)            showHelp;;
+esac
+
+[[ "${state}" == "stopped" ]] && echo "iTunes is stopped." || showStatus

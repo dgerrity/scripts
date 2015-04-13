@@ -1,0 +1,30 @@
+#!/usr/bin/osascript
+on run(args)
+  tell application "Evernote"
+    launch
+    set allNotes to find notes "*"
+    repeat with aNote in (a reference to allNotes)
+        if local id of aNote contains item 1 of args as string then
+	    set theNote to aNote
+	    exit repeat
+	end if
+    end repeat
+    tell me to set cd to (get current date) as string
+    set hTxt to ""
+    try
+	set hTxt to hTxt & "Markdown Creation Date: " & cd & "  \n"
+        set hTxt to hTxt & "Evernote Title: " & title of theNote & "  \n"
+	set hTxt to hTxt & "Evernote Creation Date: " & (creation date of theNote as string) & "  \n"
+	set hTxt to hTxt & "Evernote Keywords: " 
+	set theTags to tags of theNote
+	set keywords to ""
+	repeat with atag in theTags
+	       if keywords ≠ "" then set keywords to keywords & ", "
+	       set keywords to keywords & (name of aTag as string)
+	end repeat
+	set hTxt to hTxt & keywords & "  \n"
+    end try
+    if hTxt is not "" then set hTxt to hTxt & "\n"
+    return hTxt
+  end tell
+end run

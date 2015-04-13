@@ -1,0 +1,177 @@
+#!/bin/bash
+
+###############################################################################
+# Vol - a bash script that manipulates volume settings on the Mac.
+#
+# $Source: /Users/dan/bin/RCS/vol2-v $
+# $Date: 2011-09-28 20:54:43-07 $
+# $Revision: 1.2 $
+#
+###############################################################################
+
+###############################################################################
+# Definitions and shortcuts
+
+SAY_VOL=${SAY_VOL:-40}    # Volume used in 'say' commands
+me="$(basename $0)"
+verison=$(grep -m1 Revision $0 | sed 's/..\(.*\).\$$/\1/')
+osa="/usr/bin/osascript -e"
+
+# Prefixes and suffix to simplify calls to osascript
+sysprefix="osascript -e '"
+itprefix="osascript -e 'tell application \"iTunes\" to"
+postfix="'"
+
+###############################################################################
+# Functions
+
+function usage() {
+    echo "${me} version ${version}"; echo
+    echo "Vol manipulates volume settings for both the systems and iTunes"
+    echo
+    echo "Usage: ${me} [command]"
+    echo "       ${me} [-y | -i | -b] [command [value]] [-y | -i | -b] [command [value]]..."
+    echo "       ${me} number"; echo
+    echo "Commands"
+    echo " number      sets the volume to number (0-100), implies -u"
+    echo " set     -s  sets the volume to following value, implies -u"
+    echo " down    -d  decreases volume 10%"
+    echo " up      -u  increases volume 10%"
+    echo " show    -w  shows current settings"
+    echo " push    -p  pushes all applicable settings, implies option -b"
+    echo " pop     -o  pops all prior settings, implies option -b"
+    echo " mute    -m  mutes volume"
+    echo " unmute  -n  unmutes volume"
+    echo " hush    -q  mutes both iTunes and the system, pauses iTunes, same as -bmz"
+    echo " help    -h  shows this message"
+    echo " pause   -z  pauses iTunes"; echo
+    echo "Options"
+    echo "         -a   uses \"say\" to confirm the commands, implies unmute -u"
+    echo "         -y   all following options and commands apply to the system (default)"
+    echo "         -i   all following commands apply to iTunes"
+    echo "         -b   all following commands apply to both the system and iTunes"
+    echo "         -V   supplies more detail, implies say -a"
+    echo "         -r   runs iTunes if necessary to apply a command."; echo
+    echo "Notes"
+    echo "All volume settings are on a scale of 0 to 100.  If no command is"
+    echo "specified, show is implied.  If a number is supplied as a command,"
+    echo "set is implied.  If -r is not specified and iTunes is not running,"
+    echo "no iTunes commands will be applied (including push and pop)"
+    echo "If -a is specified, say will use the environment variable SAY_VOL,"
+    echo "which defaults to 40."; echo
+    echo "Examples"
+    echo "${me} 30            sets the system volume to 30% and unmutes."
+    echo "${me} -i 30         sets iTunes volume to 30% and unmutes iTunes."
+    echo "${me} set 60 -i 50  sets system to 60, iTunes to 50, unmutes both."
+    echo "${me} mute          mutes the system volume."
+    echo "${me} vol -z        pauses iTunes, leaves volume settings alone."
+    echo "${me} -p            pushes all volume settings."
+    echo "${me} hush          mutes everything and pauses iTunes."
+    echo "${me} -b down       lowers both volumes 10%"
+    echo "${me} -orza         pops values, runs iTunes, pauses, and audibly confirms."
+    echo
+    exit 1
+}
+
+# Sends the specified command (in double quotes) to iTunes
+function it() {
+    [[ (-z ${o_launch}) || (-z ${o_applyi}) ]] && return
+    eval "${itprefix} $* ${postfix}"
+    isitr="true"
+}
+
+# Sends the specified command (in double quotes) to the system
+function sys() {
+    [[ -z ${o_applys} ]] && return
+    eval "${sysprefix} $* ${postfix}"
+}
+
+# Converts booleans for display
+function bool() {
+    [[ "${1}" == "t" ]] && echo "true" || echo "false"
+}
+
+function iTunesRunning() {
+    ps axo command | grep "[i]Tunes "
+}
+
+# Reads current volume settings
+function getCurrentSettings() {
+    svol=$(sys "get (output volume of (get volume settings))")
+    smuted=$(sys "get (output muted of (get volume settings))")
+    [[ "${smuted}" == "true" ]] && smuted="muted" || smuted="unmuted"
+    if [[ ("$(iTunesRunning)") || (${o_launch}) ]]; then
+	ivol=$(it "sound volume as integer")
+	imuted=$(it "get mute")
+	[[ "${imuted}" == "true" ]] && imuted="muted" || imuted="unmuted"
+    fi
+}
+
+function main() {
+    echo "cmd is ${cmd}"
+    case ${cmd} in
+	show) getCurrentSettings
+	      echo "System: ${svol} ${smuted}"
+	      [[ ${target} == iTunes ]] && echo "iTunes: ${ivol} ${imute}";;
+	"set")  ${osa} "set volume without output muted"
+	      ${osa} "set volume output volume ${newval}";;
+	get)  echo "${val} ${mute}";;
+	push) echo "${val} ${mute}" >> /tmp/volstack;;
+	pop)  lines=$(cat /tmp/volstack 2> /dev/null | wc -l)
+              if [[ ${lines} -gt 0 ]]; then
+		  v=$(tail -n 1 /tmp/volstack | sed 's/ .*$//')
+		  m=$(tail -n 1 /tmp/volstack | sed 's/^.* //')
+		  [[ "${m}" == "muted" ]] && word="with" || word="without"
+		  ${osa} "set volume output volume ${v}"
+		  ${osa} "set volume ${word} output muted"
+		  if [[ ${lines} -eq 1 ]]; then
+		      rm /tmp/volstack
+		  else
+		      head -n $((lines-1)) /tmp/volstack > /tmp/volstack2
+		      mv /tmp/volstack2 /tmp/volstack
+		  fi
+	      fi;;
+	off|mute)  ${osa} 'set volume with output muted';;
+	on|unmute) ${osa} 'set volume without output muted';;
+	up)   ${osa} 'set volume without output muted'
+	      ${osa} "set volume output volume $((${val}+10))";;
+	down) ${osa} 'set volume without output muted'
+	      ${osa} "set volume output volume $((${val}-10))";;
+	*)    usage;;
+esac
+}
+
+###############################################################################
+# Code
+###############################################################################
+
+unset o_applyi o_verbose o_launch o_say ivol imuted cmd
+
+if [[ ! ${1} ]]; then
+    cmd=show
+elif [[ (! ${2}) && (! $(echo ${1} | sed 's/[0-9]//g')) ]]; then
+    cmd="set"; newvol=${1}; shift
+fi
+
+echo "cmd is ${cmd}"
+isitr=$(ps ax | grep -v 'grep\|Helper' | grep iTunes.app) # iTunes running?
+while getopts ":s:dpomuivhl" opt; do
+    case ${opt} in
+	s) cmd="set"; newvol="${OPTARG}";;
+	d) cmd="show";;
+	p) cmd="push";;
+	o) cmd="pop";;
+	m) mute="mute";;
+	u) mute="unmute";;
+	i) target="iTunes";;
+	v) verbose="t";;
+	h) usage;;
+	l) launch="t";;
+	:) echo "Value required for option ${OPTARG}"; usage;;
+	?) echo "Invalid argument - ${OPTARG}."; usage;;
+    esac
+done	
+[[ ("${cmd}" == "") && ("${mute}" != "") ]] && cmd=${mute}
+
+echo "cmd is ${cmd}"
+main

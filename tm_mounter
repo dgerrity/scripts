@@ -1,0 +1,16 @@
+#!/bin/bash
+[[ -e /Users/dan/.bashrc ]] && source /Users/dan/.bashrc
+
+vol_mount="Passport TM HD"
+
+log "Starting $0"
+if ! mount | grep "$vol_mount" ; then
+   # Drive isn't mounted, so: mount. A LaunchAgent will pick this OnMount action up and run the backup script
+    log "drive is not mounted, mounting ${vol_mount}"
+    diskutil mount "$vol_mount"
+else
+    # Drive is mounted, so: run the backup script
+    log "drive ${vol_mount} is indeed mounted, starting a backup"
+    /Users/dan/bin/tm_backup
+fi
+	  

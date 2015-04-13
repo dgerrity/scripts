@@ -1,0 +1,12 @@
+#!/bin/bash
+
+###############################################################################
+#
+# emacst - a script to explictly load emacs in a terminal window
+#
+# $Id: emacst-v 1.1 2013-06-17 09:37:55-07 dan Exp $
+#
+###############################################################################
+
+set -e
+/Applications/Emacs.app/Contents/MacOS/Emacs -nw "$@"

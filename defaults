@@ -1,0 +1,75 @@
+#!/bin/bash
+
+###############################################################################
+# 
+# Defaults - a script to log changes made using the defaults command.
+#
+# This script must be put in the path AHEAD of the default command.  To see
+# where the vanilla defaults is, type $ which defaults.  To see the path, type
+# $echo $PATH.  Copy this script to something in front of /usr/bin.  If you
+# don't have anything in front of it, you can add a path in ~/.bashrc by using
+# EXPORT PATH="~/bin:${PATH}" (for example, with a home subdir of bin).
+# Note: for security reasons NEVER add your home directory to your path.  
+# Make a subdirectory.
+#
+# $Id: defaults-v 1.5 2013-06-09 16:06:33-07 dan Exp $
+#
+###############################################################################
+
+###############################################################################
+# Definitions
+
+# Location of the log file.  
+# The default is ~/Dropbox/.defaults.{machine short name}.log, 
+# If 'lf' is defined in .bashrc, it will override this setting.  To make the
+# log visible in Finder, remove the dot prefix on 'defaults...log'
+lf="${lf:-${HOME}/Dropbox/.defaults.$(hostname -s).log}"
+
+# Find out who called this script so it can be logged.
+whorang="$(basename $(ps -p $PPID -o command= | sed -e 's/^[-\.]//' | sed 's#/bin/bash ##'))"
+
+# Replace the basename function to strip the leading '-' off '-bash'; it confuses programs
+function basename() { echo $(/usr/bin/basename $(echo "${*}" | sed 's/^-//')); }
+
+# Create logfile directory if it doesn't exist
+[[ ! -d "$(dirname ${lf})" ]] && mkdir -p "$(dirname ${lf})"
+
+###############################################################################
+# Functions
+
+# Log a string.  Prefix it with the date, and indent if it's a nested script
+function log() {
+    [[ "${whorang:0:5}" == "login" ]] && let shlvl=0 || let shlvl=${SHLVL}-2
+    sp=$(printf "%$((${shlvl}*4))s" " ")
+    echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(basename $0) $@" >> "${lf}"
+}
+
+if [[ ! ${1} ]]; then
+    echo "This is the script version of defaults.  Run /usr/bin/defaults to see help"
+    exit 1
+fi
+
+# Use plain defaults for anything except write, delete, or find
+if [[ ! $(echo ${1} | grep "write\|delete\|find") ]]; then
+    /usr/bin/defaults $@
+    exit $?
+fi
+
+# Get the operand, domain, key.  Logger sends to the syslog available in Console
+# If the findprefs script is installed, call that on a find
+if [[ ${1} != find ]]; then
+    op=${1}; dom=${2}; key=${3}; shift; shift; shift; args="${@}"
+    [[ "$(echo ${dom} | grep -i launch)" ]] && \
+	echo "Warning: possible problem mixing preferences with launch agents."
+    [[ (${op} == write) && ("${args}" == "") ]] && args='""'
+    log "${USER} executed defaults ${op} ${dom} ${key} ${args}"
+    logger "${USER} executed defaults ${op} ${dom} ${key} ${args}"
+    log "existing value: \"$(/usr/bin/defaults read ${dom} ${key} 2> /dev/null)\""
+    logger "existing value: \"$(/usr/bin/defaults read ${dom} ${key} 2> /dev/null)\""
+    /usr/bin/defaults ${op} ${dom} ${key} ${args}
+    log "new value: \"$(/usr/bin/defaults read ${dom} ${key})\""
+    logger "new value: \"$(/usr/bin/defaults read ${dom} ${key})\""
+    exit 0
+else
+    [[ $(which findprefs) ]] && findprefs -lk ${2} || /usr/bin/defaults $@
+fi

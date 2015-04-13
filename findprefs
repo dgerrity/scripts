@@ -1,0 +1,267 @@
+#!/bin/bash
+###############################################################################
+# 
+# findprefs - a script to search for preferences files containing the case
+# insensitive argument in the filename.
+#
+# $Source: /Users/dan/bin/RCS/findprefs-v $
+# $Date: 2013-06-17 12:33:21-07 $
+# $Revision: 1.19 $
+#
+###############################################################################
+
+set -o noglob
+me="$(basename ${0})"
+
+###############################################################################
+# Function definitions
+###############################################################################
+
+function vecho() {
+    [[ ${o_verbose} ]] && echo "$@"
+}
+
+function findkey() {
+    if [[ ($EUID -eq 0) && ${o_user} ]]; then
+	while read fn; do
+	    fn=$(echo $fn | awk '{print $6}' | sed "s/[\':]//g")
+	    kfiles="${kfiles}|${fn}"
+	done < <(su ${o_user} - -c "/usr/bin/defaults find ${1} | grep 'keys in domain'")
+    else
+	while read fn; do
+	    fn=$(echo $fn | awk '{print $6}' | sed "s/[\':]//g")
+	    kfiles="${kfiles}|${fn}"
+	done < <(/usr/bin/defaults find ${1} 2> /dev/null | grep 'keys in domain')
+    fi
+}
+
+function lookIn() {
+    while read fn; do 
+	[[ ! $(echo "${fn}" | grep "\.lockfile") ]] && pfiles="${pfiles}|${fn}"
+    done < <(${o_sudo} /usr/bin/find "${1}" -iname "*${2}*\.plist*" 2>/dev/null)
+}
+
+function look() {
+    if [[ ! ${o_system_only} ]]; then
+	vecho "Checking User Preferences..."
+	lookIn "${HOME}/Library/Preferences" "${1}"                        # U Library: Prefs
+	vecho "Checking User LaunchAgents..."
+	lookIn "${HOME}/Library/LaunchAgents" "${1}"                       # U Library: LAgents
+	vecho "Checking Dropbox..."
+	lookIn "${HOME}/Dropbox/Library"
+
+	vecho "Checking User Container Preferences and LaunchAgents..."
+	containers=$(/bin/ls "${HOME}/Library/Containers/")
+	cpath="${HOME}/Library/Containers"
+	for cdir in ${containers}; do
+	    lookIn "${cpath}/${cdir}/Data/Library/Preferences"  "${1}"     # U Containers: Prefs
+	    lookIn "${cpath}/${cdir}/Data/Library/LaunchAgents" "${1}"     # U Containers: LAgents
+	done
+
+	if [[ ${o_app_support} ]]; then
+	    vecho "Checking User Application Support..."
+	    lookIn "${HOME}/Library/Application Support" "${1}"            # U Library: App Sup
+	    for cdir in "${containers}"; do
+		[[ ! -d "${cpath}/${cdir}" ]] && continue
+		lookIn "${cpath}/${cdir}/Data/Application Support" "${1}"  # U Containers: App Sup
+	    done
+	fi
+    fi
+    if [[ ! ${o_user_only} ]]; then
+	vecho "Checking System Preferences..."
+	lookIn "/Library/Preferences"          "${1}"                      # R Lib Prefs
+	vecho "Checking System Launch Agents..."
+	lookIn "/Library/LaunchAgents"         "${1}"                      # R Lib LaunchAgents
+	lookIn "/System/Library/LaunchAgents"  "${1}"                      # S Lib LaunchAgents
+	vecho "Checking System Launch Daemons..."
+	lookIn "/Library/LaunchDaemons"        "${1}"                      # R Lib LaunchDaemons
+	lookIn "/System/Library/LaunchDaemons" "${1}"                      # S Lib LaunchDaemons
+	vecho "Checking Containers..."
+	containers="$(${o_sudo} /bin/ls -1A /var/root/Library/Containers/)"
+	cpath="/var/root/Library/Containers"
+	for cdir in "${containers}"; do
+	    lookIn "${cpath}/${cdir}/Data/Library/Preferences" "${1}"      # root Con Prefs
+	    lookIn "${cpath}/${cdir}/Data/Library/LaunchAgents" "${1}"     # root Con LA
+	    lookIn "${cpath}/${cdir}/Data/Library/LaunchDaemons" "${1}"    # root Con LD
+	done
+	if [[ ${o_app_support} ]]; then
+	    vecho "Checking System Application Support..."
+	    lookIn "${HOME}/Library/Application Support" "${1}"
+	    for cdir in "${containers}"; do
+		lookIn "${cpath}/${cdir}/Data/Application Support" "${1}"
+	    done
+	fi
+    fi
+}
+
+function lookTight() {
+    if [[ ! ${o_system_only} ]]; then
+	${o_sudo} /usr/bin/find "${HOME}/Library/Preferences" -name "${1}\.plist"
+	${o_sudo} /usr/bin/find "${HOME}/Library/LaunchAgents" -name "${1}\.plist"
+	[[ ${o_app_support} ]] && \
+	    ${o_sudo} /usr/bin/find "${HOME}/Library/Application Support" -name "${1}\.plist"
+    fi
+    if [[ ! ${o_user_only} ]]; then
+	${o_sudo} /usr/bin/find "/Library/Preferences" -name "${1}\.plist"
+	${o_sudo} /usr/bin/find "/Library/LaunchAgents" -name "${1}\.plist"
+	${o_sudo} /usr/bin/find "/System/Library/LaunchAgents" -name "${1}\.plist"
+	${o_sudo} /usr/bin/find "/Library/LaunchDaemons" -name "${1}\.plist"
+	${o_sudo} /usr/bin/find "/System/Library/LaunchDaemons" -name "${1}\.plist"
+	[[ ${o_app_support} ]] && \
+	    ${o_sudo} /usr/bin/find "/Library/Application Support" -name "${1}\.plist"
+    fi
+}
+
+function workPref() {
+    [[ ! ${2} ]] && return
+    [[ -w "${2}" ]] && o_sudo= || o_sudo=sudo
+    ${o_sudo} plutil -convert xml1 "${2}"
+    ${o_sudo} ${o_action} "${2}"
+    ${o_sudo} plutil -convert binary1 "${2}"
+}
+
+function keySearch() {
+    findkey "${searchterm}"
+    if [[ ${kfiles} ]]; then
+	kfiles="${kfiles:1}"
+	echo "\"${searchterm}\" found in the following domains:"
+	echo "${kfiles}" | tr '|' "\n"
+	numFiles=$(echo "${kfiles}" | tr '|' "\n" | wc -l | awk '{print $1}')
+	if [[ ${o_locate} ]]; then
+	    [[ ${numFiles} -gt 6 ]] && \
+		echo -en "\n\nToo many files to recurse, be more specific\n" && return
+	    echo "Corresponding preference files:"
+	    echo "${kfiles}" | tr '|' "\n" | while read line; do
+		lookTight "${line}" | sed "s#${HOME}#~#"
+	    done
+	fi
+    else
+	echo "No keys matching \"${searchterm}\" found."
+    fi
+}
+
+function fileSearch() {
+    look "${searchterm}"
+    if [[ ${pfiles} ]]; then
+	pfiles="${pfiles:1}"
+	let i=1
+	OFS=${IFS}
+	IFS="|"
+	for f in ${pfiles}; do
+	    trim=$(echo "${f}" | sed -e "s#${HOME}#~#g" -e 's/Library/L/g' -e 's/Preferences/P/g' -e 's/Containers/C/g')
+	    [[ ${o_no_abbrev} ]] && trim="${f}"
+	    printf "%2s: %s \n" $(( i++ )) "${trim}"
+	    [[ ${o_ls} ]] && printf "    " && ${o_sudo} ls -Al ${f} | sed 's|/.*$||'
+	done
+	IFS=${OFS}
+	[[ ${o_action} ]] && \
+	    workPref ${o_action} "$(echo "${pfiles}" | cut -f "${o_which}" -d '|')"
+    else
+	echo "No preference files matching \"${searchterm}\" found."
+    fi
+}
+
+function usage() {
+    echo "Usage: ${me} [-USav] [-u user] [-coe number] [-p] preference-term"
+    echo "       ${me} -k [-v] [-u user] [-r] key-name"
+    echo "       ${me} search-term [options]"
+    echo
+    echo "${me} searches for preference files containing the specified string,"
+    echo "or searches all domains for the specified key. If the first argument"
+    echo "is not an option it is used as the search term."; echo
+    echo "Options:"
+    echo "  -p       partial title of a preference file"
+    echo "  -U       search only user preferences"
+    echo "  -S       search only system preferences (implied if user is root)"
+    echo "  -a       include application support directories (requires patience)"
+    echo "  -b       do NOT abbreviate results"
+    echo "  -u user  include \"user\'s\" preferences"
+    echo "  -c n     cat the nth result to stdout"
+    echo "  -o n     open the nth result with the default plist editor"
+    echo "  -e n     edit the nth result with the default editor"
+    echo "  -v       verbose"
+    echo
+    echo "  -k key   list all domains containing the key"
+    echo "  -l       show permissions, owners, and dates (ls -Al)"
+    echo "  -r       recursively list pref files corresponding to domains found with -k"; echo
+    exit 1
+}
+
+function check_opts() {
+#   Make sure options are compatible
+    if [[ ! ${searchterm} ]]; then echo -e "No search term provided\n"; usage; fi
+
+    [[ ${o_key} && \
+	(${o_user_only} || ${o_system_only} || ${o_app_support} || ${o_action}) ]] && \
+	echo "Invalid options used with -k" && usage
+
+    [[ (${o_system_only}) && (${o_user_only}) ]] && echo "both -u and -s specified" && usage
+	
+}
+
+function main() {
+#   If the user is root then check to be sure we're not in console mode; warn the user
+#   that no user prefs are being checked unless a username was specified.
+    if [[ ${EUID} -eq 0 ]]; then
+	o_sudo=
+	[[ ! -d /Applications ]] && echo "Warning: chroot probably necessary."
+	if [[ ! ${o_user} ]]; then
+	    echo -e "\nWARNING: checking system prefs only\n"
+	    o_system_only=true; o_user_only=
+	else 
+	    HOME="/Users/${o_user}"; o_system_only=
+	fi
+    fi
+
+#   If we want to check system preferences and we are not root, we'll need privileges
+    [[ (! ${o_user_only}) && (${EUID} -ne 0) ]] && o_sudo=sudo
+
+#   If verbose, list out what we're doing.
+    if [[ ${o_verbose} ]]; then
+	[[ ${o_key} ]] && s_what="domain" || s_what="preferences"
+	[[ ${o_user} ]] && s_user=" for user ${o_user}"
+	[[ (${o_system_only}) || ((${EUID} -eq 0) && (! ${o_user})) ]] && \
+	    s_context=" [system only]" && s_user=
+	str="Searching ${s_what}${s_user}${s_context} for ${searchterm}"
+    fi
+    vecho "${str}"
+
+#   Searching for either a key or a file
+    [[ ${o_key} ]] && keySearch || fileSearch
+}
+
+###############################################################################
+# Code
+###############################################################################
+
+[[ (! ${1}) || (${1} == "--help") ]] && usage
+
+if [[ "${1:0:1}" != "-" ]]; then
+    searchterm=${1}
+    shift
+fi
+
+while getopts ":p:USabu:c:o:e:vk:lr" option; do
+    case ${option} in
+	p) searchterm=${OPTARG};;
+	U) o_user_only=true;;
+	S) o_system_only=true;;
+	a) o_app_support=true;;
+	b) o_no_abbrev=true;;
+	u) o_user="${OPTARG}";;
+	c) o_action="$(/usr/bin/which cat)";              o_which=${OPTARG};;
+	o) o_action="$(/usr/bin/which open)";             o_which=${OPTARG};;
+	e) o_action="$(/usr/bin/which ${EDITOR:-emacs})"; o_which=${OPTARG};;
+	k) o_key=true;    searchterm=${OPTARG};;
+	l) o_ls=true;;
+	r) o_locate=true;;
+	v) o_verbose=true;;
+	:) echo "Required argument to -${option} not specified."; exit 2;;
+	*) echo "Unexpected argument \"${OPTARG}\", ${me} --help for help."; exit 2;;
+    esac
+done
+
+[[ ${OPTIND} -eq ${#@} ]] && searchterm=${@:${OPTIND}}
+
+
+main

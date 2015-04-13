@@ -1,0 +1,18 @@
+#!/bin/bash
+[[ -e /Users/dan/.bashrc ]] && source /Users/dan/.bashrc
+
+bu_volume="Passport TM HD"
+
+if mount | grep "${bu_volume}" ; then
+    # Drive is mounted, so: backup and then eject after
+    log "Starting backup with tmutil --block startbackup"
+    log $(tmutil startbackup --block)
+    log "Finished, ejecting ${bu_volume}"
+    diskutil eject "${bu_volume}"
+    log "Backup finished"
+    if mount | grep "${bu_volume}"; then
+        log disk is ejected
+    else
+        log disk did not eject
+    fi
+fi

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+###############################################################################
+#
+# emacsc - a script that will explicitly launch the GUI version of emacs
+#
+# $Id: emacsc-v 1.1 2013-06-17 09:37:06-07 dan Exp $
+#
+###############################################################################
+
+set -e
+/Applications/Emacs.app/Contents/MacOS/Emacs -n "$@"

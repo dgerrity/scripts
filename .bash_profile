@@ -830,6 +830,9 @@ function edit() {
 ###############################################################################
 
 logger "$(me) executed by $(ps -p $PPID -o args=), pid $$"
+[[ $(ulimit -n) -ne 8196 ]] && ulimit -n 8196
+[[ $(ulimit -n) -le 256 ]] && ulimit -u 512
+
 fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcBrown=33; fgcRed=31; bgcGrey=47; bgcNone=49
 bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
@@ -1006,4 +1009,6 @@ else
 fi
 
 [[ -e ~/.bash_env ]] && source ~/.bash_env
+true
+
 

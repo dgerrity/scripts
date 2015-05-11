@@ -111,8 +111,7 @@ function showStatus() {
 
 # Determines whether iTunes is running
 function running() {
-    [[ "$(ps ax | grep "iTunes\.app.*/iTunes " | grep -v grep)" != "" ]] \
-	&& return 0 || return 1
+    echo $(ps ax | grep "iTunes\.app.*/iTunes$")
 }
 
 function checkSpecialCases() {

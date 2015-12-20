@@ -19,7 +19,7 @@
 #
 ###############################################################################
 
-source /Users/dan/.bashrc
+[[ -s /Users/dan/.bashrc ]] && source /Users/dan/.bashrc || source ${HOME}/.bashrc
 bprev="$(echo '$Revision: 1.102 $' | sed -e 's/\$//g' -e 's/ $//')"
 platform=$(uname)
 
@@ -844,7 +844,7 @@ case $(hostname -s) in
     tango)     fgc=${fgcRed};;
     zulu)      fgc=${fgcRed};;
     deltagolf) fgc=${fgcBlue};;
-        * )   fgc=${fgcBlack}; bgc=${bgcGrey};;
+#        * )   fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3
 export PS1="\[\e]2;\u@\H - \j - \T\a\e[${bgc};${fgc}${bold}m\]\h:\w \\$\[\e[0m\] "

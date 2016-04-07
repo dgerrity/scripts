@@ -9,7 +9,7 @@
 #
 ###############################################################################
 
-[[ -e /Users/dan/.bashrc ]] && source /Users/dan/.bashrc || logger "No .bashrc"
+[[ -e ${HOME}/.bashrc ]] && source ${HOME}/.bashrc || logger "No .bashrc"
 
 rsyncport=873
 
@@ -126,7 +126,7 @@ function showMACAddresses() {
 
 	rc=0
 	decho "Checking interface ${i}"
-	mac="$(fixmac $(ifconfig -m ${i} | grep "ether [0-9]" | awk '{print $2}'))"
+	mac="$(fixmac $(ifconfig -m ${i} | grep "ether [0-9a-f]" | awk '{print $2}'))"
 	name="$(grep "${mac}" ${HOME}/.knownmacaddresses | cut -f2-10 -d' ')"
 	if [[ ("${name}") && "${o_markdown}" ]]; then mac="${mac} | $(echo -en ${name})"
 	elif [[ "${name}" ]]; then mac="${mac} $(echo -en ${name})"
@@ -250,8 +250,8 @@ function mainprog() {
     str="unavailable"
     if ! host -t A checkip.dyndns.org > /dev/null; then str="cannot-find";
     elif ! ping -c2 -t5 google.com &> /dev/null; then str="cannot-ping";
-    elif nc -z checkip.dyndns.com 80 | grep succeeded > /dev/null; then
-	str=$(curl -m 2 -s http://checkip.dyndns.org -o - | grep "Current IP Address")
+    elif nc -z checkip.dyndns.com 80 2>&1 | grep succeeded > /dev/null; then
+	str=$(curl -m 5 -s http://checkip.dyndns.org -o - | grep "Current IP Address")
 	[[ ${str} ]] && \
 	    str=$(echo ${str} | sed 's/.*s: \([0-9\.]*\)<.*/\1/') || \
 	    str="intercepted"

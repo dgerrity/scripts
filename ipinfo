@@ -251,7 +251,7 @@ function mainprog() {
 #    if ! host -t A checkip.dyndns.org > /dev/null; then str="cannot-find";
 #    elif ! ping -c2 -t5 google.com &> /dev/null; then str="cannot-ping";
 #    elif nc -z checkip.dyndns.com 80 2>&1 | grep succeeded > /dev/null; then
-	str=$(curl -m5 -s http://checkip.dyndns.org -o - | grep "IP")
+    str=$(dig +short myip.opendns.com @resolver1.opendns.com)
 	[[ ${str} ]] && \
 	    str=$(echo ${str} | sed 's/.*s: \([0-9\.]*\)<.*/\1/') || \
 	    str="error"

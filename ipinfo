@@ -248,16 +248,15 @@ function mainprog() {
 
 #   Get public IP address
     str="unavailable"
-    if ! host -t A checkip.dyndns.org > /dev/null; then str="cannot-find";
-    elif ! ping -c2 -t5 google.com &> /dev/null; then str="cannot-ping";
-    elif nc -z checkip.dyndns.com 80 2>&1 | grep succeeded > /dev/null; then
-	str=$(curl -m 2 -s http://checkip.dyndns.org -o - | grep "Current IP Address")
+#    if ! host -t A checkip.dyndns.org > /dev/null; then str="cannot-find";
+#    elif ! ping -c2 -t5 google.com &> /dev/null; then str="cannot-ping";
+#    elif nc -z checkip.dyndns.com 80 2>&1 | grep succeeded > /dev/null; then
+	str=$(curl -m5 -s http://checkip.dyndns.org -o - | grep "IP")
 	[[ ${str} ]] && \
 	    str=$(echo ${str} | sed 's/.*s: \([0-9\.]*\)<.*/\1/') || \
-	    str="intercepted"
-    fi
+	    str="error"
+#    fi
     printl public: ${str}
-
     if ! showMACAddresses; then
 	printl interfaces no-MAC-Addresses
 	log "early exit due  to no MAC addresses in use, rc=4"

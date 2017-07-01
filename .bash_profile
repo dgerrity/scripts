@@ -321,6 +321,24 @@ function evermd() {
 }
 
 ###############################################################################
+# Interviewing
+
+function interview() {
+    pushd .
+    cd ~/Documents/WorkDocs/NewDocs/HR/Interviewing/Interviews
+    open "../Amazon Interview Guide - Consolidated Leadership Principles.docx"
+    open "https://hire.amazon.com/interviews"
+    if [[ ${1} ]]; then
+	fn=$(echo "${1} {$2}" | tr ' ' '-' | tr "[:upper:]" "[:lower:]").md
+	open "https://www.linkedin.com/search/results/index/?keywords=${1}+${2}&origin=GLOBAL_SEARCH_HEADER"
+	if [[ ! -s ${fn} ]]; then
+	    echo "# ${1} ${2}" >> ${fn}
+	fi
+    fi
+}
+
+
+###############################################################################
 # Internet and lookup functions
 
 function lookup() { open "dict://$*"; }
@@ -907,7 +925,6 @@ alias funcg="compgen -A function | grep -i"
 alias googleb="google os x bash"
 alias googleh="google hints macworld os x"
 alias googlem="google os x"
-alias googlel="google os x mavericks"
 alias listfunc="compgen -A function | sort"
 alias listfuncg="compgen -A function | grep -i"
 alias loadprof="source $(me); echo Profile revision ${bprev} loaded"
@@ -947,7 +964,7 @@ alias webroot="cd /Library/WebServer/Documents"
 alias which="\type -a"
 
 # Mac stuff
-function define() { open "dict://${1}"; }
+function define() { open "dict://$*"; }
 alias devcenter="open https://developer.apple.com/devcenter/mac/index.action#"
 alias dirhide="sudo chflags -h hidden"
 alias dirshow="sudo chflags -h nohidden"

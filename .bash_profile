@@ -326,13 +326,16 @@ function evermd() {
 function interview() {
     pushd . &> /dev/null
     cd ~/Documents/WorkDocs/NewDocs/HR/Interviewing/Interviews
-    open "../Amazon Interview Guide - Consolidated Leadership Principles.docx"
-    open "https://hire.amazon.com/interviews"
     if [[ ${1} ]]; then
+	open "../Amazon Interview Guide - Consolidated Leadership Principles.docx" && 
+	open "https://hire.amazon.com/interviews"
 	fn=$(echo "${1} ${2}" | tr ' ' '-' | tr "[:upper:]" "[:lower:]").md
 	open "https://www.linkedin.com/search/results/index/?keywords=${1}+${2}&origin=GLOBAL_SEARCH_HEADER"
-	if [[ ! -s ${fn} ]]; then
-	    echo "# ${1} ${2}" >> ${fn}
+	if [[ ! -f ${fn} ]]; then
+	    echo -e "# ${1} ${2}\n\n" >> ${fn}
+	    echo -e "> I am [not] inclined to hire ${1} for the position of \n\n" >> ${fn}
+	    echo -e "---\n\n" >> ${fn}
+	    echo -e "How did we get here?\n\n* " >> ${fn}
 	else
 	    echo "${fn} already exists."
 	fi

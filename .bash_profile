@@ -55,7 +55,7 @@ function _portupgrade() {
     growlog "starting port upgrade"
     if [[ ! $(nmap -p 873 rsync.macports.org | grep "873/tcp open") ]]; then
 	growlog "rsync blocked -- upgrade aborted."
-	return 1
+        return 1
     fi
     rm -f "${pf}"
     sudo port list installed 2> dev/null | while read line; do 
@@ -325,7 +325,7 @@ function evermd() {
 
 function interview() {
     pushd . &> /dev/null
-    cd ~/Documents/WorkDocs/NewDocs/HR/Interviewing/Interviews
+    cd ~/Documents/WorkDocs/NewDocs/Team/Interviewing/Interviews
     if [[ ${1} ]]; then
 	open "../Amazon Interview Guide - Consolidated Leadership Principles.docx" && 
 	open "https://hire.amazon.com/interviews"
@@ -503,6 +503,10 @@ function amazon() {
     open ${url}
 }
 
+function products() {
+    curl https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/index.json 2>&1 | grep -c "offerCode";
+}
+
 function _handlePortal() {
     url="http://portal.concur.com"
     if ! grep 172\.1 <(ifconfig) >/dev/null; then
@@ -534,7 +538,7 @@ function emissions() {
 	return
     fi
     [[ ${5} ]] && format=${5} || format=html
-    site="http://carbon.brighterplanet.com/flights.${format}"
+    site="http://impact.brighterplanet.com/flights.${format}"
     str="airline=${1}"
     str="${str}&origin_airport=${2}"
     str="${str}&destination_airport=${3}"
@@ -970,6 +974,7 @@ alias which="\type -a"
 
 # Mac stuff
 function define() { open "dict://$*"; }
+alias cisco='open -a "Cisco AnyConnect Secure Mobility Client"'
 alias devcenter="open https://developer.apple.com/devcenter/mac/index.action#"
 alias dirhide="sudo chflags -h hidden"
 alias dirshow="sudo chflags -h nohidden"
@@ -994,6 +999,7 @@ alias renew="sudo ipconfig set ${aptdev} DHCP"
 alias restartfinder="killall Finder"
 alias rootkey="sudo '/Applications/Utilities/Keychain Access.app/Contents/MacOS/Keychain Access' &"
 alias scripts="pushd ~/Library/Scripts/Applications > /dev/null"
+alias stanford="open http://snsr.stanford.edu/landing.html"
 alias switchprinter="lpoptions -d "
 alias unmute="vol on"
 

@@ -28,17 +28,20 @@ platform=$(uname)
 
 ###############################################################################
 # Alias-type functions
-function echored()  { tput setf 4; echo "$*";   tput op;               }
-function editw()    { ${EDITOR} $(/usr/bin/which ${1});                }
-function growlog()  { /Users/dan/bin/growl "$*"; log "$*";             }
-function locker()   { mv "${1}" "${HOME}/Dropbox/Documents/Locker/";   }
-function manpath()  { echo $MANPATH | tr ':' '\n';                     }
-function me()       { echo "/Users/dan/.bash_profile";                 }
-function path()     { echo $PATH | tr ':' '\n';                        }
-function su()       { pwd -P > /tmp/.pushd; /usr/bin/su $@;            }
-function sud()      { echo "${1}" > /tmp/.pushd; /usr/bin/su $@;       }
-function wcl()      { cat "${1}" | wc -l | awk '{print $1}';           }
-function whoson()   { who; w; rwho; whos; last | grep -v ${USER};      }
+function decrypt()  { openssl aes-256-cbc -a -d -salt -in "${1}.aes" -out "${1}"; }
+function define()   { open "dict://$*";                                           }
+function echored()  { tput setf 4; echo "$*";   tput op;                          }
+function encrypt()  { openssl aes-256-cbc -a -e -salt -in "${1}" -out "${1}.aes"; }
+function editw()    { ${EDITOR} $(/usr/bin/which ${1});                           }
+function growlog()  { /Users/dan/bin/growl "$*"; log "$*";                        }
+function locker()   { mv "${1}" "${HOME}/Dropbox/Documents/Locker/";              }
+function manpath()  { echo $MANPATH | tr ':' '\n';                                }
+function me()       { echo "/Users/dan/.bash_profile";                            }
+function path()     { echo $PATH | tr ':' '\n';                                   }
+function su()       { pwd -P > /tmp/.pushd; /usr/bin/su $@;                       }
+function sud()      { echo "${1}" > /tmp/.pushd; /usr/bin/su $@;                  }
+function wcl()      { cat "${1}" | wc -l | awk '{print $1}';                      }
+function whoson()   { who; w; rwho; whos; last | grep -v ${USER};                 }
 
 ###############################################################################
 # Mac OS X functions
@@ -55,10 +58,10 @@ function _portupgrade() {
     growlog "starting port upgrade"
     if [[ ! $(nmap -p 873 rsync.macports.org | grep "873/tcp open") ]]; then
 	growlog "rsync blocked -- upgrade aborted."
-        return 1
+	return 1
     fi
     rm -f "${pf}"
-    sudo port list installed 2> dev/null | while read line; do 
+    sudo port installed 2> /dev/null | while read line; do 
 	echo ${line} | awk '{print $1 $2}' >> "${pf}"
     done
     growlog "starting selfupdate ($(wcl ${pf}) ports)"
@@ -67,28 +70,28 @@ function _portupgrade() {
 	return 1
     fi
     growlog "port selfupdate completed"
-    [[ ! "$(sudo port list outdated 2> /dev/null)" ]] && log "no outdated ports"
+    [[ ! "$(sudo port installed outdated 2> /dev/null)" ]] && log "no outdated ports"
     local ports=$(sudo port list outdated 2> /dev/null | awk '{print $1}')
     for p in ${ports}; do
 	log "upgrading ${p}"
 	growl "upgrading ${p}"
 	sudo port -Rc upgrade ${p} &> /dev/null
     done
-    sudo port list inactive 2> /dev/null | while read line; do
+    sudo port installed inactive 2> /dev/null | while read line; do
 	log "inactive: $(echo ${line} | awk '{print $1 $2}')"
     done
-    [[ ! "$(sudo port list inactive 2> /dev/null)" ]] && log "no inactive ports"
-    ports=$(sudo port list inactive 2> /dev/null | awk '{print $1}')
+    [[ ! "$(sudo port installed inactive 2> /dev/null)" ]] && log "no inactive ports"
+    ports=$(sudo port installed inactive 2> /dev/null | awk '{print $1}')
     for p in ${ports}; do
 	growlog "uninstalling inactive ${p}"
     done
     sudo port uninstall inactive &> /dev/null
-    sudo port list leaves 2> /dev/null | while read line; do
+    sudo port installed leaves 2> /dev/null | while read line; do
 	log "leaf: $(echo ${line} | awk '{print $1 $2}')"
     done
     rm -f "${pf}"
     growl "Listing active ports"
-    sudo port list installed 2> /dev/null | while read line; do 
+    sudo port installed 2> /dev/null | while read line; do 
 	echo ${line} | awk '{print $1 $2}' >> "${pf}"
     done
 }
@@ -341,7 +344,6 @@ function interview() {
 	fi
     fi
 }
-
 
 ###############################################################################
 # Internet and lookup functions
@@ -857,9 +859,6 @@ function edit() {
 ###############################################################################
 
 logger "$(me) executed by $(ps -p $PPID -o args=), pid $$"
-[[ $(ulimit -n) -ne 8196 ]] && ulimit -n 8196
-[[ $(ulimit -n) -le 256 ]] && ulimit -u 512
-
 fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcBrown=33; fgcRed=31; bgcGrey=47; bgcNone=49
 bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
@@ -871,7 +870,7 @@ case $(hostname -s) in
     tango)     fgc=${fgcRed};;
     zulu)      fgc=${fgcRed};;
     deltagolf) fgc=${fgcBlue};;
-#        * )   fgc=${fgcBlack}; bgc=${bgcGrey};;
+        * )   fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3
 export PS1="\[\e]2;\u@\H - \j - \T\a\e[${bgc};${fgc}${bold}m\]\h:\w \\$\[\e[0m\] "
@@ -973,7 +972,7 @@ alias webroot="cd /Library/WebServer/Documents"
 alias which="\type -a"
 
 # Mac stuff
-function define() { open "dict://$*"; }
+function define() { open "dict://${1}"; }
 alias cisco='open -a "Cisco AnyConnect Secure Mobility Client"'
 alias devcenter="open https://developer.apple.com/devcenter/mac/index.action#"
 alias dirhide="sudo chflags -h hidden"
@@ -1037,6 +1036,3 @@ else
 fi
 
 [[ -e ~/.bash_env ]] && source ~/.bash_env
-true
-
-

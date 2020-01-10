@@ -29,7 +29,6 @@ function log() {
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
 }
 
-[[ -d /opt/local/bin ]]     && PATH=/opt/local/bin:/opt/local/sbin: || PATH=
 [[ -d "${HOME}/bin" ]]      && PATH="${PATH}${HOME}/bin:" || PATH="${PATH}/Users/dan/bin:"
 [[ -d /usr/local/bin ]]     && PATH="${PATH}/usr/local/bin:"
 PATH="${PATH}/usr/bin:/bin:/usr/sbin:/sbin:"
@@ -38,7 +37,6 @@ PATH="${PATH}/usr/X11/bin"
 [[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH
 
-[[ -d /opt/local/share/man ]] && MANPATH=/opt/local/share/man: || MANPATH=
 [[ -d /usr/local/share/man ]] && MANPATH="${MANPATH}/usr/local/share/man:"
 MANPATH=${MANPATH}/usr/share/man:/usr/local/share/man:
 MANPATH=${MANPATH}/usr/X11/share/man

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ###############################################################################
 #
 # .bash_profile on Mac OS X Darwin bash is called at login, either by
@@ -36,7 +36,7 @@ function editw()    { ${EDITOR} $(/usr/bin/which ${1});                         
 function growlog()  { /Users/dan/bin/growl "$*"; log "$*";                        }
 function locker()   { mv "${1}" "${HOME}/Dropbox/Documents/Locker/";              }
 function manpath()  { echo $MANPATH | tr ':' '\n';                                }
-function me()       { echo "/Users/dan/.bash_profile";                            }
+function me()       { echo "${HOME}/.bash_profile";                            }
 function path()     { echo $PATH | tr ':' '\n';                                   }
 function su()       { pwd -P > /tmp/.pushd; /usr/bin/su $@;                       }
 function sud()      { echo "${1}" > /tmp/.pushd; /usr/bin/su $@;                  }
@@ -862,15 +862,15 @@ logger "$(me) executed by $(ps -p $PPID -o args=), pid $$"
 fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcBrown=33; fgcRed=31; bgcGrey=47; bgcNone=49
 bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
-    sierra)    fgc=${fgcBlack};;
-    cookie)    fgc=${fgcBrown};;
-    derilect)  fgc=${fgcBrown};;
-    papa)      fgc=${fgcBrown};;
-    romeo)     fgc=${fgcBlue};;
-    tango)     fgc=${fgcRed};;
-    zulu)      fgc=${fgcRed};;
-    deltagolf) fgc=${fgcBlue};;
-        * )   fgc=${fgcBlack}; bgc=${bgcGrey};;
+    sierra)        fgc=${fgcBlack};;
+    cookie)        fgc=${fgcBrown};;
+    derilect)      fgc=${fgcBrown};;
+    papa)          fgc=${fgcBrown};;
+    romeo)         fgc=${fgcBlue};;
+    dgerrity-mac)  fgc=${fgcRed};;
+    zulu)          fgc=${fgcRed};;
+    deltagolf)     fgc=${fgcBlue};;
+        * )        fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3
 export PS1="\[\e]2;\u@\H - \j - \T\a\e[${bgc};${fgc}${bold}m\]\h:\w \\$\[\e[0m\] "
@@ -935,7 +935,7 @@ alias googleh="google hints macworld os x"
 alias googlem="google os x"
 alias listfunc="compgen -A function | sort"
 alias listfuncg="compgen -A function | grep -i"
-alias loadprof="source $(me); echo Profile revision ${bprev} loaded"
+alias loadprof="source $(me``); echo Profile revision ${bprev} loaded"
 alias logcat="cat ${lf}"
 alias logcatnet="cat ${logdir}/com.centvc.netwatch.log"
 alias logedit="edit ${lf}"

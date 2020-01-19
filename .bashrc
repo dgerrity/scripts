@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 ###############################################################################
 #
 # .bashrc on Mac OS X Darwin bash is called at every invocation of bash, 
@@ -20,7 +19,6 @@ rcrev="$(echo '$Revision: 1.29 $' | sed -e 's/\$//g' -e 's/ $//')"
 whorang="$(/usr/bin/basename "$(ps -p $PPID -o command= | sed -e 's/^[-.]//' -e 's#/bin/bash ##')")"
 
 # Functions
-
 function cbasename() { echo $(/usr/bin/basename $(echo "${*}" | sed 's/^-//')); }
 
 function log() {
@@ -28,27 +26,6 @@ function log() {
     sp=$(printf "%$((${shlvl}*4))s" " ")
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
 }
-
-[[ -d "${HOME}/bin" ]]      && PATH="${PATH}${HOME}/bin:" || PATH="${PATH}/Users/dan/bin:"
-[[ -d /usr/local/bin ]]     && PATH="${PATH}/usr/local/bin:"
-PATH="${PATH}/usr/bin:/bin:/usr/sbin:/sbin:"
-[[ -d /usr/local/sbin ]]    && PATH="${PATH}/usr/local/sbin:"
-PATH="${PATH}/usr/X11/bin"
-[[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
-export PATH
-
-[[ -d /usr/local/share/man ]] && MANPATH="${MANPATH}/usr/local/share/man:"
-MANPATH=${MANPATH}/usr/share/man:/usr/local/share/man:
-MANPATH=${MANPATH}/usr/X11/share/man
-[[ -d /usr/local/man ]]       && MANPATH=${MANPATH}:/usr/local/man
-export MANPATH
-
-export PYTHONPATH="/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python"
-
-export DISPLAY=:0.0   
-export daapport=3689
-export rsyncport=873
-export LC_ALL="en_US.UTF-8"
 
 if [[ -d "${HOME}/logs" ]]; then logdir="${HOME}/logs"
 elif [[ -d "${HOME}/Library/Logs" ]]; then logdir="${HOME}/Library/Logs"
@@ -58,6 +35,19 @@ fi
 export logdir
 export lf="${logdir}/com.centvc.log"
 
+[[ -d "${HOME}/bin" ]]      && PATH="${HOME}/bin:${PATH}" || PATH="/Users/dan/bin:${PATH}"
+[[ -d /usr/local/sbin ]]    && PATH="${PATH}:/usr/local/sbin"
+[[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
+export PATH
+
+MANPATH="/usr/share/man:/usr/local/share/man"
+export MANPATH
+
+export PYTHONPATH="/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python"
+export DISPLAY=:0.0   
+export daapport=3689
+export rsyncport=873
+export LC_ALL="en_US.UTF-8"
 export homessid="kpp-dual"
 export aptname="Wi-Fi"
 export aptdev=en0

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ###############################################################################
 # 
 # findprefs - a script to search for preferences files containing the case

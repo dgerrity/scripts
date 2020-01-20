@@ -882,8 +882,8 @@ if [[ (${SSH_CLIENT}) && (${SSH_CALLER} == $(hostname -s)) ]]; then
     tput init
 fi
 
-thishost="$(hostname -s)"
-virtualhosts="oscar mike" #kilo zulu uniform
+thishost="$(hostname -s | sed 's/[- ]/_/g')"
+virtualhosts="" #oscar mike kilo zulu uniform
 localhosts="${thishost} ${virtualhosts}"
 homehosts="deltagolf zulu sierra cookie roy derilect pi"
 remotehosts="whiskey bfvana cottage garage hoopyfrood kkc kritzman"

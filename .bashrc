@@ -57,10 +57,10 @@ export proxy=sierra.dnsdojo.com
 export daapserver=sierra.dnsdojo.com
 
 # Default addresses for important machines 
-for i in romeo sierra cookie tango deltagolf zulu; do export "${i}"="${i}.dnsdojo.com"; done
+# for i in romeo sierra cookie tango deltagolf zulu; do export "${i}"="${i}.dnsdojo.com"; done
 case "$(hostname -s)" in
     romeo)   export daapserver=sierra.dnsdojo.com; export vpndev=utun1 aptdev=en1;;
     sierra)  export proxy=romeo.dnsdojo.com; export proxyport=34345; aptdev=en1;;
     *);;
 esac
-export $(hostname -s)="$(hostname)"
+export $(hostname -s | sed -e 's/[- ]/_/g' -e 's/[()]//g')="$(hostname)"

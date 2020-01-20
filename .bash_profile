@@ -35,8 +35,8 @@ function encrypt()  { openssl aes-256-cbc -a -e -salt -in "${1}" -out "${1}.aes"
 function editw()    { ${EDITOR} $(/usr/bin/which ${1});                           }
 function growlog()  { /Users/dan/bin/growl "$*"; log "$*";                        }
 function locker()   { mv "${1}" "${HOME}/Dropbox/Documents/Locker/";              }
-function manpath()  { echo $MANPATH | tr ':' '\n';                                }
-function me()       { echo "${HOME}/.bash_profile";                            }
+function manpath()  { /usr/bin/manpath | tr ':' '\n';                             }
+function me()       { echo "${HOME}/.bash_profile";                               }
 function path()     { echo $PATH | tr ':' '\n';                                   }
 function su()       { pwd -P > /tmp/.pushd; /usr/bin/su $@;                       }
 function sud()      { echo "${1}" > /tmp/.pushd; /usr/bin/su $@;                  }

@@ -40,8 +40,8 @@ export lf="${logdir}/com.centvc.log"
 [[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH
 
-MANPATH="/usr/share/man:/usr/local/share/man"
-export MANPATH
+#MANPATH="${MANPATH}/usr/share/man:/usr/local/share/man"
+#export MANPATH
 
 export PYTHONPATH="/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python"
 export DISPLAY=:0.0   

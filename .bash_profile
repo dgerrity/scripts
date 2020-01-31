@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 ###############################################################################
 #
@@ -215,7 +214,7 @@ function screen_share() {
     fi
     ssport=$(getFreePort)
     [[ ${o_auto} ]] && autossh -M ${monport} -f -NL ${ssport}:localhost:5900 ${target} || \
-	ssh -f -NL ${ssport}:localhost:5900 ${target}
+	ssh -l dan -f -NL ${ssport}:localhost:5900 ${target}
     sleep 1
     open vnc://localhost:${ssport}
 }
@@ -440,7 +439,7 @@ function li() {
 #   Lookup a name on LinkedIn and Facebook                                                          
     if [[ "${netloc}" == "Disconnected" ]]; then echo ${netloc}; return 1; fi
     if [[ "${2}" == "" ]]; then echo "Usage: ${0} first last"; return 1; fi
-    open "http://www.facebook.com/search/?q=${1}+${2}&init=quick"
+#   open "http://www.facebook.com/search/?q=${1}+${2}&init=quick"
     open "http://www.linkedin.com/search/results/all/?keywords=${1} ${2}&origin=GLOBAL_SEARCH_HEADER"
 }
 
@@ -476,6 +475,10 @@ function aria() {
     fi
     url="https://people.oracle.com/apex/f?p=8000:HOME::::::#${sstr}"
     open "${url}"
+}
+
+function forcesso() {
+    open https://oradocs-corp.sites.us2.oraclecloud.com/authsite/home/
 }
 
 function crisp() {

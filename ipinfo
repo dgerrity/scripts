@@ -1,11 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ###############################################################################
 # ipinfo
 # Displays useful information about the current network location
-#
-# $Id: ipinfo-v 1.29 2013-12-17 11:12:25-08 dan Exp $
-# $Revision: 1.29 $
 #
 ###############################################################################
 
@@ -74,7 +71,7 @@ function osxDeviceFromInterface() {
 function showServer() {
 #   showServer( fqn display-name [port] ); gets ip, gateway, and whether its reachable
     decho showServer $@
-    local ri=$(route get ${1} 2>&1)
+    local ri=$(route -n get ${1} 2>&1)
     if [[ $(echo ${ri} | grep "bad") ]]; then
 	printl ${2}: ${1} cannot-resolve
 	return
@@ -91,8 +88,8 @@ function showServer() {
     local gw=$(echo ${ri} | grep gateway | sed 's/.*gateway: \([.[:digit:]]*\).*/\1/')
 #   If there is an ip address but no gateway, its a local area machine
     [[ (! ${gw}) && ( ${ip}) ]] && gw="local" || gw=${gw:-invalid}
-    decho $(date) figured out local or remote, calling nmap
-    [[ ${3} ]] && po=$(nmap -Pn -p ${3} ${1} | grep tcp | sed 's/.*tcp \(.*\) .*/\1/')
+    decho $(date) figured out local or remote, calling nmap -n -Pn -p ${3} ${1}
+    [[ ${3} ]] && po=$(nmap -n -Pn -p ${3} ${1} | grep tcp | sed 's/.*tcp \(.*\) .*/\1/')
     decho $(date) nmap done
     printl ${2}: ${ip} ${gw} ${po} ${3}
 }

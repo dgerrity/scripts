@@ -37,7 +37,6 @@ function log() {
 [[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH
 
-export PYTHONPATH="/System/Library/Frameworks/Python.framework/Versions/Current/Extras/lib/python"
 export DISPLAY=:0.0   
 export daapport=3689
 export rsyncport=873

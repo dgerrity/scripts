@@ -28,6 +28,7 @@ platform=$(uname)
 
 ###############################################################################
 # Alias-type functions
+function 1pass()    { echo -n "openssl aes-256-cbc -a -e -salt" | pbcopy;         }
 function decrypt()  { openssl aes-256-cbc -a -d -salt -in "${1}.aes" -out "${1}"; }
 function define()   { open "dict://$*";                                           }
 function echored()  { tput setf 4; echo "$*";   tput op;                          }

@@ -213,8 +213,9 @@ function screen_share() {
 	monport=$(getFreePort);
     fi
     ssport=$(getFreePort)
+    echo "about to call ssh -f -NL ${ssport}:localhost:5900 ${target}"
     [[ ${o_auto} ]] && autossh -M ${monport} -f -NL ${ssport}:localhost:5900 ${target} || \
-	ssh -l dan -f -NL ${ssport}:localhost:5900 ${target}
+	ssh -f -NL ${ssport}:localhost:5900 ${target}
     sleep 1
     open vnc://localhost:${ssport}
 }
@@ -328,17 +329,16 @@ function evermd() {
 
 function interview() {
     pushd . &> /dev/null
-    cd ~/Documents/WorkDocs/NewDocs/Team/Interviewing/Interviews
+    cd ~/Documents/Team/Interviews
     if [[ ${1} ]]; then
-	open "../Amazon Interview Guide - Consolidated Leadership Principles.docx" && 
-	open "https://hire.amazon.com/interviews"
 	fn=$(echo "${1} ${2}" | tr ' ' '-' | tr "[:upper:]" "[:lower:]").md
 	open "https://www.linkedin.com/search/results/index/?keywords=${1}+${2}&origin=GLOBAL_SEARCH_HEADER"
 	if [[ ! -f ${fn} ]]; then
-	    echo -e "# ${1} ${2}\n\n" >> ${fn}
-	    echo -e "> I am [not] inclined to hire ${1} for the position of \n\n" >> ${fn}
-	    echo -e "---\n\n" >> ${fn}
-	    echo -e "How did we get here?\n\n* " >> ${fn}
+	    echo -n "# ${1} ${2}\n\n" > ${fn}
+	    str="> I am [not] inclined to hire ${1} for the position of {} based on this one-hour, "
+	    str+="in-person interview conducted on $(date "+%Y-%m-%d").  I was assigned the competencies "
+	    str+="{}."
+	    echo -e "${str}  \n\n---\n\n" >> ${fn}
 	else
 	    echo "${fn} already exists."
 	fi
@@ -588,6 +588,11 @@ function browserupgrade() {
 function find-python-lib() {
     open "http://pypi.python.org/pypi?%3Aaction=search&term=${1}&submit=Search+PyPi"
 }
+
+function sendcloud() {
+    swaks -s $SMTP_SERVER:587 -tls -au $SMTP_USERNAME -ap $SMTP_PASSWORD -f dgerrity-mac@gerrity.org $*
+}
+
 
 ###############################################################################
 # UNIX functions
@@ -1051,3 +1056,9 @@ else
 fi
 
 [[ -e ~/.bash_env ]] && source ~/.bash_env
+
+export PATH=/Users/dgerrity/bin:$PATH
+
+[[ -e "/Users/dgerrity/lib/oracle-cli/lib/python2.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/Users/dgerrity/lib/oracle-cli/lib/python2.7/site-packages/oci_cli/bin/oci_autocomplete.sh"
+
+[[ -e "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"

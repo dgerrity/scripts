@@ -37,7 +37,6 @@ function log() {
 [[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH
 
-export PYTHONPATH="/System/Library/Frameworks/Python.framework/Versions/Current/Extras/lib/python"
 export DISPLAY=:0.0   
 export daapport=3689
 export rsyncport=873
@@ -47,7 +46,7 @@ export aptname="Wi-Fi"
 export aptdev=en0
 export vpndev=utun2;
 export proxyport=34343
-export proxy=sierra.dnsdojo.com
+export proxy=97.113.238.244
 export daapserver=sierra.dnsdojo.com
 export GIT_CRYPT=yes
 export EDITOR=emacs

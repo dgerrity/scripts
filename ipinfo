@@ -228,6 +228,7 @@ function mainprog() {
 #   Check to see if important ports are blocked
     showServer imap.gmail.com "gmail" 993
     showServer smtp.gmail.com "mts/smtp" 587
+    [[ ${SMTP_SERVER} ]] && showServer "${SMTP_SERVER}" "mts/oci" 587
     showServer rsync.macports.org "rsync" ${rsyncport}
 
 #   Check to see if the SOCKS proxy is active
@@ -254,7 +255,8 @@ function mainprog() {
 	    str=$(echo ${str} | sed 's/.*s: \([0-9\.]*\)<.*/\1/') || \
 	    str="error"
 #    fi
-    printl public: ${str}
+    rDNS=$(dig -x ${str} +short)
+    printl public: ${str} ${rDNS}
     if ! showMACAddresses; then
 	printl interfaces no-MAC-Addresses
 	log "early exit due  to no MAC addresses in use, rc=4"

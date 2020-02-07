@@ -1,4 +1,4 @@
-#!/opt/local/bin/bash
+#!/usr/bin/env bash
 ###############################################################################
 # 
 # proxy - a script to setup SOCKS proxy and homesharing connections
@@ -64,7 +64,6 @@ function waitForSSID() {
 ###############################################################################
 # Code
 
-[[ -e /Users/dan/.bashrc ]] && . /Users/dan/.bashrc
 me=$(basename $0)
 proxyserver=${proxy:-sierra.dnsdojo.com}
 port=${proxyport:-34343}

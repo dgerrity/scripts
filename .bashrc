@@ -17,16 +17,6 @@
 # Definitions
 rcrev="$(echo '$Revision: 1.29 $' | sed -e 's/\$//g' -e 's/ $//')"
 whorang="$(/usr/bin/basename "$(ps -p $PPID -o command= | sed -e 's/^[-.]//' -e 's#/bin/bash ##')")"
-
-# Functions
-function cbasename() { echo $(/usr/bin/basename $(echo "${*}" | sed 's/^-//')); }
-
-function log() {
-    [[ "${whorang:0:5}" == "login" ]] && let shlvl=0 || let shlvl=${SHLVL}-1
-    sp=$(printf "%$((${shlvl}*4))s" " ")
-    echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
-}
-
 if [[ -d "${HOME}/logs" ]]; then logdir="${HOME}/logs"
 elif [[ -d "${HOME}/Library/Logs" ]]; then logdir="${HOME}/Library/Logs"
 elif [[ -d "/Users/dan/logs" ]]; then logdir="/Users/dan/logs"
@@ -35,15 +25,19 @@ fi
 export logdir
 export lf="${logdir}/com.centvc.log"
 
+function cbasename() { echo $(/usr/bin/basename $(echo "${*}" | sed 's/^-//')); }
+function log() {
+    [[ "${whorang:0:5}" == "login" ]] && let shlvl=0 || let shlvl=${SHLVL}-1
+    sp=$(printf "%$((${shlvl}*4))s" " ")
+    echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
+}
+
 [[ -d "${HOME}/bin" ]]      && PATH="${HOME}/bin:${PATH}" || PATH="/Users/dan/bin:${PATH}"
 [[ -d /usr/local/sbin ]]    && PATH="${PATH}:/usr/local/sbin"
 [[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH
 
-#MANPATH="${MANPATH}/usr/share/man:/usr/local/share/man"
-#export MANPATH
-
-export PYTHONPATH="/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python"
+export PYTHONPATH="/System/Library/Frameworks/Python.framework/Versions/Current/Extras/lib/python"
 export DISPLAY=:0.0   
 export daapport=3689
 export rsyncport=873
@@ -55,6 +49,8 @@ export vpndev=utun2;
 export proxyport=34343
 export proxy=sierra.dnsdojo.com
 export daapserver=sierra.dnsdojo.com
+export GIT_CRYPT=yes
+export EDITOR=emacs
 
 # Default addresses for important machines 
 # for i in romeo sierra cookie tango deltagolf zulu; do export "${i}"="${i}.dnsdojo.com"; done

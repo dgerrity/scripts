@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ###############################################################################
 #
@@ -9,4 +9,4 @@
 ###############################################################################
 
 set -e
-/Applications/Emacs.app/Contents/MacOS/Emacs -n "$@"
+/Applications/Emacs.app/Contents/MacOS/Emacs "$@"

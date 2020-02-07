@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ###############################################################################
 # 
 # ec - emacs client - a direct way to invoke the GUI version of emacs as a

@@ -215,7 +215,7 @@ function screen_share() {
     fi
     ssport=$(getFreePort)
     [[ ${o_auto} ]] && autossh -M ${monport} -f -NL ${ssport}:localhost:5900 ${target} || \
-	ssh -f -NL ${ssport}:localhost:5900 ${target}
+	ssh -l dan -f -NL ${ssport}:localhost:5900 ${target}
     sleep 1
     open vnc://localhost:${ssport}
 }
@@ -439,9 +439,9 @@ function translate() {
 function li() {
 #   Lookup a name on LinkedIn and Facebook                                                          
     if [[ "${netloc}" == "Disconnected" ]]; then echo ${netloc}; return 1; fi
-    if [[ "${2}" == "" ]]; then echo "Usage: lifb first last"; return 1; fi
-    open "http://www.facebook.com/search/?q=${1}+${2}&init=quick"
-    open "http://www.linkedin.com/search/fpsearch?fname=${1}&lname=${2}"
+    if [[ "${2}" == "" ]]; then echo "Usage: ${0} first last"; return 1; fi
+#   open "http://www.facebook.com/search/?q=${1}+${2}&init=quick"
+    open "http://www.linkedin.com/search/results/all/?keywords=${1} ${2}&origin=GLOBAL_SEARCH_HEADER"
 }
 
 function lic() {
@@ -461,6 +461,25 @@ function lic() {
     url="${url}&pplSearchOrigin=MDYS&viewCriteria=2&sortCriteria=DR"
     url="${url}&redir=redir"
     open "${url}"
+}
+
+function aria() {
+    if [[ "${netloc}" == "Disconnected" ]]; then echo ${netloc}; return 1; fi
+    if [[ ${1} =~ \. || ${1} =~ \@ ]]; then
+	sstr="${1}"
+    elif [[ ${2} ]]; then
+	sstr="${1}+${2}"
+    elif [[ ${1} ]]; then
+	sstr="@${1}"
+    else
+	sstr=""
+    fi
+    url="https://people.oracle.com/apex/f?p=8000:HOME::::::#${sstr}"
+    open "${url}"
+}
+
+function forcesso() {
+    open https://oradocs-corp.sites.us2.oraclecloud.com/authsite/home/
 }
 
 function crisp() {
@@ -863,18 +882,15 @@ logger "$(me) executed by $(ps -p $PPID -o args=), pid $$"
 fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcBrown=33; fgcRed=31; bgcGrey=47; bgcNone=49
 bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
-    sierra)        fgc=${fgcBlack};;
-    cookie)        fgc=${fgcBrown};;
-    derilect)      fgc=${fgcBrown};;
     papa)          fgc=${fgcBrown};;
-    romeo)         fgc=${fgcBlue};;
-    dgerrity-mac)  fgc=${fgcRed};;
+    dgerrity-mac)  fgc=${fgcGrey};;
     zulu)          fgc=${fgcRed};;
     deltagolf)     fgc=${fgcBlue};;
         * )        fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3
 export PS1="\[\e]2;\u@\H - \j - \T\a\e[${bgc};${fgc}${bold}m\]\h:\w \\$\[\e[0m\] "
+
 [[ ! ${SSH_CALLER} ]] && export SSH_CALLER=$(hostname -s)
 if [[ (${SSH_CLIENT}) && (${SSH_CALLER} == $(hostname -s)) ]]; then
     export PROMPT_DIRTRIM=2
@@ -899,11 +915,7 @@ for i in ${localhosts};  do eval export ${i}=\"${i}.local\"; done
 [[ "${ip:0:6}" == "172.17" ]] && export roy=172.17.73.246
 [[ "${ip:0:7}" == "10.0.10" ]] && for i in ${homehosts}; do eval export ${i}=\"${i}.local\"; done
 
-export DEFAULT_DICT=~/Dropbox/Library/share/dict/altscrab
-export CLICOLOR=1
-export LSCOLORS=exfxcxdxbxegedabagacad
-export EDITOR="emacs"
-export REPLYTO="dan@gerrity.org"
+[[ -r ~/Dropbox/Library/share/dict/altscrab ]] && export DEFAULT_DICT=~/Dropbox/Library/share/dict/altscrab
 
 # Old cmd.exe and old qnx habits
 alias cd..="cd .."
@@ -952,6 +964,10 @@ alias whosfilesharing="sudo lsof -i4TCP:548 | grep EST | sed 's/.* TCP \([0-9\.]
 alias whosonitunes="sudo lsof -i4TCP:548 | grep EST | sed 's/.* TCP \([0-9\.]*\):daa.*$/\1/'"
 
 # Better unix
+export CLICOLOR=1
+export LSCOLORS=dxfxcxdxbxegedabagacad
+export EDITOR="emacs"
+export REPLYTO="dan@gerrity.org"
 alias env="env | sort -f"
 alias envg="env | sort -f | grep -i"
 alias hexdump="hexdump -C"
@@ -1006,9 +1022,8 @@ alias unmute="vol on"
 utils="dig dnstrace dnstracer ftp host iperf nc nmap nslookup ping scutil ssh traceroute wget"
 if [[ $(/usr/bin/which brew) ]]; then
     bp=$(brew --prefix)
-    if [[ -f ${bp}/etc/bash_completion ]]; then
-	. ${bp}/etc/bash_completion
-    fi
+    [[ -f ${bp}/etc/profile.d/bash_completion.sh ]] && source ${bp}/etc/profile.d/bash_completion.sh
+    [[ -f ${bp}/etc/bash_completion ]] && source ${bp}/etc/bash_completion
 else
     unset list; for i in ${sshhosts}; do list="${list} ${!i}"; done 
     complete -o default -W "${list}" homeshare

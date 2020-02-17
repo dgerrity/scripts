@@ -27,7 +27,10 @@
  kept-new-versions 6
  kept-old-versions 2
  version-control t
-)
+ )
+
+;; Go ahead and follow symlinks to edit the original file
+(setq vc-follow-symlinks t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; UTF-8 encoding

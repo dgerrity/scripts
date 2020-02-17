@@ -28,10 +28,9 @@ platform=$(uname)
 
 ###############################################################################
 # Alias-type functions
-function decrypt()  { openssl aes-256-cbc -a -d -salt -in "${1}.aes" -out "${1}"; }
+function 1pass()    { echo -n "openssl aes-256-cbc -a -e -salt" | pbcopy;         }
 function define()   { open "dict://$*";                                           }
 function echored()  { tput setf 4; echo "$*";   tput op;                          }
-function encrypt()  { openssl aes-256-cbc -a -e -salt -in "${1}" -out "${1}.aes"; }
 function editw()    { ${EDITOR} $(/usr/bin/which ${1});                           }
 function growlog()  { /Users/dan/bin/growl "$*"; log "$*";                        }
 function locker()   { mv "${1}" "${HOME}/Dropbox/Documents/Locker/";              }
@@ -676,6 +675,20 @@ function rcslog()  { tail "RCS/logs/${1}.log";                              }
 ###############################################################################
 # File functions
 
+function encrypt() {
+    [[ ! -f "${1}" ]] && echo "Usage: ${0} <filename>" && return
+    if [[ -f "${1}.aes" ]]; then
+	read -p "${1}.aes exists.  Overwrite? [y] " ans
+	[[ (${ans}) && (${ans} != "y") ]] && return
+    fi
+    openssl aes-256-cbc -a -e -salt -in "${1}" -out "${1}.aes"
+}
+
+function decrypt() {
+    [[ ! -f "${1}.aes" ]] && echo "Usage: ${0} filename-without-aes" && return
+    openssl aes-256-cbc -a -d -salt -in "${1}.aes" -out "${1}"
+}
+
 function tarball() {
 # create, verbose, gzip, filename
     if [[ -f "${1}.tar.gz" ]]; then
@@ -972,7 +985,7 @@ export CLICOLOR=1
 export LSCOLORS=dxfxcxdxbxegedabagacad
 export EDITOR="emacs"
 export REPLYTO="dan@gerrity.org"
-alias env="env | sort -f"
+alias envp="env | sort -f"
 alias envg="env | sort -f | grep -i"
 alias hexdump="hexdump -C"
 alias kk="sudo kill"
@@ -1056,3 +1069,7 @@ else
 fi
 
 [[ -e "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"
+
+export PATH=/usr/local/bin:$PATH
+
+[[ -e "/usr/local/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/usr/local/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"

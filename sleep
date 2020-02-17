@@ -1,0 +1,34 @@
+#!/bin/bash
+
+###############################################################################
+# 
+# sleep - a script that is called when this mac goes to sleep
+#
+# $Id: .sleep-v 1.20 2013-10-27 12:58:39-07 dan Exp $
+#
+###############################################################################
+
+###############################################################################
+# Functions 
+###############################################################################
+
+###############################################################################
+# Code
+###############################################################################
+
+logger "Sleeping"
+
+[[ -r "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc" || logger "No .bashrc"
+
+log "Sleeping"
+log ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+log "pid $$ as user ${USER} ($UID) ($EUID) called by ${whorang} $*"
+diskutil eject "USB Time Machine" 2> /dev/null
+
+# [[ $(ps axo pid,command | grep "[M]essages") ]] && osascript -e 'tell app "Messages" to log out'
+
+[[ $(ps axo pid,command | grep "[S]kype") ]] && osascript -e 'tell app "Skype" to send command "SET USERSTATUS OFFLINE" script name "sleep"' 2> /dev/null
+
+log "normal exit"
+
+exit 0

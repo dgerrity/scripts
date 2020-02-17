@@ -32,8 +32,8 @@ function log() {
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
 }
 
-[[ -d "${HOME}/bin" ]]      && PATH="${HOME}/bin:${PATH}" || PATH="/Users/dan/bin:${PATH}"
-[[ -d /usr/local/sbin ]]    && PATH="${PATH}:/usr/local/sbin"
+[[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && PATH="${HOME}/bin:${PATH}"
+[[ -d /usr/local/sbin ]] && [[ ! "${PATH}" =~ /usr/local/sbin ]] && PATH="${PATH}:/usr/local/sbin"
 [[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH
 

@@ -1055,10 +1055,4 @@ else
     complete -W "$([[ -d ~/bin ]] && /bin/ls ~/bin)" editw
 fi
 
-[[ -e ~/.bash_env ]] && source ~/.bash_env
-
-export PATH=/Users/dgerrity/bin:$PATH
-
-[[ -e "/Users/dgerrity/lib/oracle-cli/lib/python2.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/Users/dgerrity/lib/oracle-cli/lib/python2.7/site-packages/oci_cli/bin/oci_autocomplete.sh"
-
 [[ -e "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"

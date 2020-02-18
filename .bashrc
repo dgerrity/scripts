@@ -59,3 +59,5 @@ case "$(hostname -s)" in
     *);;
 esac
 export $(hostname -s | sed -e 's/[- ]/_/g' -e 's/[()]//g')="$(hostname)"
+
+[[ -e "${HOME}/.bash_env" ]] && source "${HOME}/.bash_env"

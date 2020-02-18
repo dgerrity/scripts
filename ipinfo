@@ -6,8 +6,6 @@
 #
 ###############################################################################
 
-[[ -e ${HOME}/.bashrc ]] && source ${HOME}/.bashrc || logger "No .bashrc"
-
 rsyncport=873
 
 [[ ! ${aptname} ]]    && export aptname="Wi-Fi"

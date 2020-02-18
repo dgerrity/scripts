@@ -24,6 +24,7 @@ function symlink()
     ln -s "${1}" "${2}"
 }
 
+[[ ! -e $(pwd)/.bashrc ]] && echo "Run this script from the git repo" && return 1
 symlink $(pwd)/.bash_env ~/.bash_env
 symlink $(pwd)/.bash_profile ~/.bash_profile
 symlink $(pwd)/.bashrc ~/.bashrc
@@ -47,5 +48,6 @@ symlink $(pwd)/markdown-mode.el ~/.emacs.d/add-ins/markdown-mode.el
 echo "About to symbolically link (with sudo) $(pwd)/dict_scrabble /usr/share/dict/altscrab"
 sudo ln -s $(pwd)/dict_scrabble /usr/share/dict/altscrab
 sudo ln -s $(pwd)/org.gnu.emacsserver.plist ~/Library/LaunchAgents/org.gnu.emacsserver.plist
+symlink $(pwd)/config ~/.ssh/config
 
 

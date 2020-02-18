@@ -47,7 +47,8 @@ symlink $(pwd)/editorconfig.el ~/.emacs.d/add-ins/editorconfig.el
 symlink $(pwd)/markdown-mode.el ~/.emacs.d/add-ins/markdown-mode.el
 echo "About to symbolically link (with sudo) $(pwd)/dict_scrabble /usr/share/dict/altscrab"
 sudo ln -s $(pwd)/dict_scrabble /usr/share/dict/altscrab
-sudo ln -s $(pwd)/org.gnu.emacsserver.plist ~/Library/LaunchAgents/org.gnu.emacsserver.plist
+symlink $(pwd)/org.gnu.emacsserver.plist ~/Library/LaunchAgents/org.gnu.emacsserver.plist
 symlink $(pwd)/config ~/.ssh/config
+echo "Copy com.centvc.socat_listener.plist if desired into ~/Library/LaunchAgents"
 
 

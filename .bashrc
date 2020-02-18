@@ -19,7 +19,6 @@ rcrev="$(echo '$Revision: 1.29 $' | sed -e 's/\$//g' -e 's/ $//')"
 whorang="$(/usr/bin/basename "$(ps -p $PPID -o command= | sed -e 's/^[-.]//' -e 's#/bin/bash ##')")"
 if [[ -d "${HOME}/logs" ]]; then logdir="${HOME}/logs"
 elif [[ -d "${HOME}/Library/Logs" ]]; then logdir="${HOME}/Library/Logs"
-elif [[ -d "/Users/dan/logs" ]]; then logdir="/Users/dan/logs"
 else logdir="${HOME}"
 fi
 export logdir
@@ -32,7 +31,10 @@ function log() {
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
 }
 
+log ".bashrc, path is \"${PATH}\""
+[[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && log "path [${PATH}] does not think it has ${HOME}/bin, adding"
 [[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && PATH="${HOME}/bin:${PATH}"
+[[ -d /usr/local/sbin ]] && [[ ! "${PATH}" =~ /usr/local/sbin ]] && log "path [${PATH}] does not think it has /usr/local/sbin, adding"
 [[ -d /usr/local/sbin ]] && [[ ! "${PATH}" =~ /usr/local/sbin ]] && PATH="${PATH}:/usr/local/sbin"
 [[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH

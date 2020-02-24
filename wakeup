@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ###############################################################################
 # 
 # wakeup - a script that is called when this mac wakes from sleep
@@ -12,15 +12,17 @@
 ###############################################################################
 
 function maybeGrowl() {
-    [[ (-x "${HOME}/bin/growl") && ${o_growl} ]] && "${HOME}/bin/growl $@"
+    [[ ! ${o_growl} ]] && return
+    [[ $(which growl) ]] && "growl $@"
+    [[ $(which terminal-notifier) ]] && "terminal-notifier -title ${0} -message $@"
 }
 
 function waitForSSID() {
-    log "waiting for SSID..."
+    clog "waiting for SSID..."
     declare -i count=0
     if [[ "$(airport -I)" == "AirPort: Off" ]]; then
 	maybeGrowl -e "Your ${aptname} is turned off."
-	log "warning: ${aptname} is turned off."
+	clog "warning: ${aptname} is turned off."
     fi
     ssid=$(airport -I | grep " SSID:" | sed -e 's/.*: \(.*\)/\1/' \
 	-e 's/[ ()]/_/g')
@@ -30,15 +32,15 @@ function waitForSSID() {
 	ssid=$(airport -I | grep " SSID:" | sed -e 's/.*: \(.*\)/\1/' \
 	    -e 's/[ ()]/_/g')
     done
-    log "ssid ${ssid} $([[ ${count} -gt 0 ]] && echo "(took ${count} retries)")"
+    clog "ssid ${ssid} $([[ ${count} -gt 0 ]] && echo "(took ${count} retries)")"
     [[ ! ${ssid} ]] && maybeGrowl "No SSID after ${count} tries, check airport settings"
 }
 
 function wrongLocation() {
     loc="$(scselect 2>&1 | grep " \*" | sed 's/.*(\(.*\))$/\1/')"
-    log "network location is ${loc}"
+    clog "network location is ${loc}"
     if [[ "${loc}" != "Automatic" ]]; then
-	log "changing network location back to automatic."
+	clog "changing network location back to automatic."
 	[[ ${o_goowl} ]] && maybeGrowl -e "Switching network location to Automatic."
 	scselect Automatic
 	return 0
@@ -48,19 +50,26 @@ function wrongLocation() {
 
 function maybeTalk() {
     [[ ! ${o_talk} ]] && return
-    vol push; vol 30; say "$@"; vol pop
+    v=$(osascript -e 'output volume of (get volume settings)')
+    m=$(osascript -e 'output muted of (get volume settings)')
+    osascript -e 'set volume output volume 30'
+    osascript -e 'set volume without output muted'
+    say "$@"
+    osascript -e "set volume output volume ${v}"
+    [[ "${m}" == "true" ]] && w="with" || w="without"
+    osascript -e "set volume ${w} output muted"
 }
 
 function maybeLaunch() {
     grepTerm="[${1:0:1}]${1:1}"
     pid=$(ps axo pid,command | grep ${grepTerm} | awk '{print $1}')
-    [[ ${pid} ]] && log "${1} already running as pid ${pid}" && return 0
-    log "launching ${1} in ${2} seconds..."
+    [[ ${pid} ]] && clog "${1} already running as pid ${pid}" && return 0
+    clog "launching ${1} in ${2} seconds..."
     maybeGrowl "Launching ${1} in ${2} seconds"
     sleep ${2}
     pid=$(ps axo pid,command | grep ${grepTerm} | awk '{print $1}')
     if [[ ${pid} ]]; then
-	log "after ${2} seconds, ${1} was found already running as ${pid}"
+	clog "after ${2} seconds, ${1} was found already running as ${pid}"
 	return ${pid}
     fi
     open -a "${1}"
@@ -77,7 +86,7 @@ function recordNetParms() {
 }
 
 function hookHome() {
-    log hookHome
+    clog hookHome
 }
 
 function mainProg() {
@@ -85,7 +94,7 @@ function mainProg() {
     waitForSSID
     if [[ ${o_debug} ]]; then
 	id | tr ',' "\n" | while read line; do
-	log "$(echo ${line} | sed -e 's/(/ (/' -e 's/^\(..\) (/ \1 (/')"; 
+	clog "$(echo ${line} | sed -e 's/(/ (/' -e 's/^\(..\) (/ \1 (/')"; 
 	done
     fi
 
@@ -93,15 +102,15 @@ function mainProg() {
 
     case "${ssid}" in
   	"ELPP")        hookHome;;
-	"")            log "no ssid, exiting early"; return;;
-	*)             log "unrecognized location; skipping hooks";;
+	"")            clog "no ssid, exiting early"; return;;
+	*)             clog "unrecognized location; skipping hooks";;
     esac
-    log "default printer queue is $(lpstat -d | sed 's/.*: //')"
+    clog "default printer queue is $(lpstat -d | sed 's/.*: //')"
     recordNetParms
-    [[ ! ${ssid} ]] && log "still waiting for ssid" && waitForSSID
+    [[ ! ${ssid} ]] && clog "still waiting for ssid" && waitForSSID
     if [[ ($(ps ax | grep "[P]roxif" | grep -v "Dns")) && (! $(ps ax | grep "[s]sh ")) ]]; then
 	maybeTalk "Prox if eye er is running but there are no s s h connections"
-	log "proxifier is running with no underlying ssh connections."
+	clog "proxifier is running with no underlying ssh connections."
 	maybeGrowl -e "Proxifier is running without an underlying ssh connection."
     fi
 }
@@ -110,22 +119,23 @@ function mainProg() {
 # Code
 ###############################################################################
 
-o_talk=
+o_debug=
+o_talk=true
 o_growl=true
 
 wakeCalled=$(date "+%Y-%m-%dT%H:%M:%S")
-logger "Waking"
+logger -is "Waking"
 
 [[ ${1} == "-d" ]] && o_debug=t
 
-[[ -r "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc" || logger "No .bashrc"
+[[ -r "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc" || logger -is "No .bashrc"
 
 o_iplog="${logdir}/com.centvc.ipinfo.log"
 
-log "------------------------------------------------------------------"
-log "pid $$ as user ${USER} ($UID) ($EUID) called by ${whorang} $*"
+clog "------------------------------------------------------------------"
+clog "pid $$ as user ${USER} ($UID) ($EUID) called by ${whorang} $*"
 mainProg
-log "normal exit, called ${wakeCalled}"
+clog "normal exit, called ${wakeCalled}"
 
 exit 0
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+[[ -e "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc"
+
 ###############################################################################
 # ipinfo
 # Displays useful information about the current network location
@@ -186,8 +188,8 @@ function showIfChanged() {
 	fi
     done < <(diff -wByb --left-column --suppress-common-lines ${new} ${old})
     for ((j=0; j<i; j++)); do
-	log "old: $(echo ${o} | cut -f $(( i+1 )) -d '|')"
-	log "new: $(echo ${n} | cut -f $(( i+1 )) -d '|')"
+	clog "old: $(echo ${o} | cut -f $(( i+1 )) -d '|')"
+	clog "new: $(echo ${n} | cut -f $(( i+1 )) -d '|')"
     done
     mv ${new} ${old}
     return 0
@@ -213,13 +215,13 @@ function mainprog() {
 
 #   SSID info
     if ! showSSID; then
-	log "problem with ssid ${ssid}"
+	clog "problem with ssid ${ssid}"
 	ssid=
     fi
 
     if ! showInterfaces; then
 	printl interfaces no-ip-addresses
-	log "early exit due  to no ip4 addresses assigned, rc=3"
+	clog "early exit due  to no ip4 addresses assigned, rc=3"
 	exit 3
     fi
 
@@ -257,13 +259,12 @@ function mainprog() {
     printl public: ${str} ${rDNS}
     if ! showMACAddresses; then
 	printl interfaces no-MAC-Addresses
-	log "early exit due  to no MAC addresses in use, rc=4"
+	clog "early exit due  to no MAC addresses in use, rc=4"
 	exit 4
     fi
 
 #    printl bandwidth: $(printf "%'d" $(iperf -c ${proxy} -yc | sed 's/.*,//'))
 }
-
 
 function usage() {
     echo "usage: ${0} [options]"
@@ -295,9 +296,9 @@ done
 
 TIMEFORMAT="%R seconds"
 [[ ${o_debug} ]] && time mainprog || mainprog
-[[ ${rc} != 0 ]] && log "exit with rc ${rc}"
+[[ ${rc} != 0 ]] && clog "exit with rc ${rc}"
 let stoptime=$(date -j -f "%a %b %d %T %Z %Y" "$(date)" "+%s")
-log "$(( stoptime - starttime )) seconds"
+clog "$(( stoptime - starttime )) seconds"
 decho "$(( stoptime - starttime )) seconds"
 exit 0
 

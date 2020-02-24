@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ###############################################################################
 # 
@@ -12,23 +12,38 @@
 # Functions 
 ###############################################################################
 
+function maybeTalk() {
+    [[ ! ${o_talk} ]] && return
+    v=$(osascript -e 'output volume of (get volume settings)')
+    m=$(osascript -e 'output muted of (get volume settings)')
+    osascript -e 'set volume output volume 30'
+    osascript -e 'set volume without output muted'
+    say "$@"
+    osascript -e "set volume output volume ${v}"
+    [[ "${m}" == "true" ]] && w="with" || w="without"
+    osascript -e "set volume ${w} output muted"
+}
+
 ###############################################################################
 # Code
 ###############################################################################
 
-logger "Sleeping"
+o_talk=true
 
-[[ -r "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc" || logger "No .bashrc"
+logger -is "Sleeping"
 
-log "Sleeping"
-log ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-log "pid $$ as user ${USER} ($UID) ($EUID) called by ${whorang} $*"
-diskutil eject "USB Time Machine" 2> /dev/null
+[[ -r "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc" || logger -is "No .bashrc"
+
+clog "Sleeping"
+maybeTalk "Sleeping"
+clog ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+clog "pid $$ as user ${USER} ($UID) ($EUID) called by ${whorang} $*"
+#diskutil eject "USB Time Machine" 2> /dev/null
 
 # [[ $(ps axo pid,command | grep "[M]essages") ]] && osascript -e 'tell app "Messages" to log out'
 
 [[ $(ps axo pid,command | grep "[S]kype") ]] && osascript -e 'tell app "Skype" to send command "SET USERSTATUS OFFLINE" script name "sleep"' 2> /dev/null
 
-log "normal exit"
+clog "normal exit"
 
 exit 0

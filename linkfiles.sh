@@ -25,19 +25,19 @@ function symlink()
 }
 
 [[ ! -e $(pwd)/.bashrc ]] && echo "Run this script from the git repo" && return 1
-symlink $(pwd)/.bash_env ~/.bash_env
-symlink $(pwd)/.bash_profile ~/.bash_profile
-symlink $(pwd)/.bashrc ~/.bashrc
-symlink $(pwd)/checkip /usr/local/bin/checkip
-symlink $(pwd)/defaults /usr/local/bin/defaults
-symlink $(pwd)/findprefs /usr/local/bin/findprefs
-symlink $(pwd)/hang /usr/local/bin/hang
-symlink $(pwd)/inline /usr/local/bin/inline
-symlink $(pwd)/ipinfo /usr/local/bin/ipinfo
-symlink $(pwd)/proxy /usr/local/bin/proxy
-symlink $(pwd)/scrab /usr/local/bin/scrab
-symlink $(pwd)/timedns /usr/local/bin/timedns
-symlink $(pwd)/watchnet /usr/local/bin/watchnet
+symlink $(pwd)/.bash_env ${HOME}/.bash_env
+symlink $(pwd)/.bash_profile ${HOME}/.bash_profile
+symlink $(pwd)/.bashrc ${HOME}/.bashrc
+symlink $(pwd)/checkip ${HOME}/bin/checkip
+symlink $(pwd)/defaults ${HOME}/bin/defaults
+symlink $(pwd)/findprefs ${HOME}/bin/findprefs
+symlink $(pwd)/hang ${HOME}/bin/hang
+symlink $(pwd)/inline ${HOME}/bin/inline
+symlink $(pwd)/ipinfo ${HOME}/bin/ipinfo
+symlink $(pwd)/proxy ${HOME}/bin/proxy
+symlink $(pwd)/scrab ${HOME}/bin/scrab
+symlink $(pwd)/timedns ${HOME}/bin/timedns
+symlink $(pwd)/watchnet ${HOME}/bin/watchnet
 [[ ! -d ~/Library/KeyBindings ]] && mkdir ~/Library/KeyBindings
 symlink $(pwd)/DefaultKeyBinding.dict ~/Library/KeyBindings/DefaultKeyBinding.dict
 symlink $(pwd)/init.el ~/.emacs.d/init.el
@@ -50,5 +50,8 @@ sudo ln -s $(pwd)/dict_scrabble /usr/share/dict/altscrab
 symlink $(pwd)/org.gnu.emacsserver.plist ~/Library/LaunchAgents/org.gnu.emacsserver.plist
 symlink $(pwd)/config ~/.ssh/config
 echo "Copy com.centvc.socat_listener.plist if desired into ~/Library/LaunchAgents"
+echo "Assuming local sleepwatcher setup"
+symlink $(pwd)/wakeup ~/.wakup
+symlink $(pwd)/sleep ~/.sleep
 
 

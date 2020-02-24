@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ###############################################################################
 # 
@@ -46,28 +46,28 @@ if [[ ! ${1} ]]; then echo "${val} ${mute}"; exit 0; fi
 verb=${1}; newval=${1}
 
 # If first argument is a number, treat it as a set with the value
-[[ ! $(echo ${newval} | sed 's/[[:digit:]]//g') ]] && verb=set
+[[ ! $(echo ${newval} | sed 's/[[:digit:]]//g') ]] && verb="set"
 
 case "${verb}" in
-    show)      echo "${val} ${mute}";;
-    set)       ${osa} 'set volume without output muted'
-	       ${osa} "set volume output volume ${newval}";;
-    get)       echo "${val} ${mute}";;
-    push)      echo "${val} ${mute}" >> "${stk}";;
-    pop)       v=$(tail -n1 "${stk}" 2> /dev/null | cut -f1 -d' ')
-	       m=$(tail -n1 "${stk}" 2> /dev/null | cut -f2 -d' ')
-	       [[ (! ${v}) || (! ${m}) ]] && exit 0
-	       [[ ${m} == muted ]] && m="with" || m="without"
-	       ${osa} "set volume output volume ${v}"
-	       ${osa} "set volume ${m} output muted"
-	       head -n $(( $(cat ${stk} 2> /dev/null | wc -l) - 1 )) \
-		   ${stk} 2> /dev/null > ${stk}2
-	       mv ${stk}2 ${stk};;
-    off|mute)  ${osa} 'set volume with output muted';;
-    on|unmute) ${osa} 'set volume without output muted';;
-    up)        ${osa} 'set volume without output muted'
-	       ${osa} "set volume output volume $((${val}+10))";;
-    down)      ${osa} 'set volume without output muted'
-	       ${osa} "set volume output volume $((${val}-10))";;
-    *)         usage;;
+    "show")        echo "${val} ${mute}";;
+    "set")         ${osa} 'set volume without output muted'
+	           ${osa} "set volume output volume ${newval}";;
+    "get")         echo "${val} ${mute}";;
+    "push")        echo "${val} ${mute}" >> "${stk}";;
+    "pop")         v=$(tail -n1 "${stk}" 2> /dev/null | cut -f1 -d' ')
+                   m=$(tail -n1 "${stk}" 2> /dev/null | cut -f2 -d' ')
+                   [[ (! ${v}) || (! ${m}) ]] && exit 0
+                   [[ ${m} == muted ]] && m="with" || m="without"
+                   ${osa} "set volume output volume ${v}"
+                   ${osa} "set volume ${m} output muted"
+                   head -n $(( $(cat ${stk} 2> /dev/null | wc -l) - 1 )) \
+                      ${stk} 2> /dev/null > ${stk}2
+                   mv ${stk}2 ${stk};;
+    "off"|"mute")  ${osa} 'set volume with output muted';;
+    "on"|"unmute") ${osa} 'set volume without output muted';;
+    "up")          ${osa} 'set volume without output muted'
+	           ${osa} "set volume output volume $((${val}+10))";;
+    "down")        ${osa} 'set volume without output muted'
+	           ${osa} "set volume output volume $((${val}-10))";;
+    *)             usage;;
 esac

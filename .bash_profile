@@ -32,13 +32,15 @@ function 1pass()    { echo -n "openssl aes-256-cbc -a -e -salt" | pbcopy;       
 function define()   { open "dict://$*";                                           }
 function echored()  { tput setf 4; echo "$*";   tput op;                          }
 function editw()    { ${EDITOR} $(/usr/bin/which ${1});                           }
-function growlog()  { /Users/dan/bin/growl "$*"; log "$*";                        }
+function growlog()  { /Users/dan/bin/growl "$*"; clog "$*";                       }
 function locker()   { mv "${1}" "${HOME}/Dropbox/Documents/Locker/";              }
 function manpath()  { /usr/bin/manpath | tr ':' '\n';                             }
 function me()       { echo "${HOME}/.bash_profile";                               }
+function mute()     { osascript -e 'set volume with output muted';                }            
 function path()     { echo $PATH | tr ':' '\n';                                   }
 function su()       { pwd -P > /tmp/.pushd; /usr/bin/su $@;                       }
 function sud()      { echo "${1}" > /tmp/.pushd; /usr/bin/su $@;                  }
+function unmute()   { osascript -e 'set volume withouttput muted';                }            
 function wcl()      { cat "${1}" | wc -l | awk '{print $1}';                      }
 function whoson()   { who; w; rwho; whos; last | grep -v ${USER};                 }
 
@@ -69,24 +71,24 @@ function _portupgrade() {
 	return 1
     fi
     growlog "port selfupdate completed"
-    [[ ! "$(sudo port installed outdated 2> /dev/null)" ]] && log "no outdated ports"
+    [[ ! "$(sudo port installed outdated 2> /dev/null)" ]] && clog "no outdated ports"
     local ports=$(sudo port list outdated 2> /dev/null | awk '{print $1}')
     for p in ${ports}; do
-	log "upgrading ${p}"
+	clog "upgrading ${p}"
 	growl "upgrading ${p}"
 	sudo port -Rc upgrade ${p} &> /dev/null
     done
     sudo port installed inactive 2> /dev/null | while read line; do
-	log "inactive: $(echo ${line} | awk '{print $1 $2}')"
+	clog "inactive: $(echo ${line} | awk '{print $1 $2}')"
     done
-    [[ ! "$(sudo port installed inactive 2> /dev/null)" ]] && log "no inactive ports"
+    [[ ! "$(sudo port installed inactive 2> /dev/null)" ]] && clog "no inactive ports"
     ports=$(sudo port installed inactive 2> /dev/null | awk '{print $1}')
     for p in ${ports}; do
 	growlog "uninstalling inactive ${p}"
     done
     sudo port uninstall inactive &> /dev/null
     sudo port installed leaves 2> /dev/null | while read line; do
-	log "leaf: $(echo ${line} | awk '{print $1 $2}')"
+	clog "leaf: $(echo ${line} | awk '{print $1 $2}')"
     done
     rm -f "${pf}"
     growl "Listing active ports"
@@ -99,7 +101,7 @@ function _timeportupgrade() {
     exec 3>&1 4>&2
     time=$(TIMEFORMAT="%0R"; { time _portupgrade 1>&3 2>&4 ; } 2>&1)
     exec 3>&- 4>&-
-    log $(printf "port upgrade completed, %s:%#02d elapsed." $(( time / 60 )) $(( time % 60 )))
+    clog $(printf "port upgrade completed, %s:%#02d elapsed." $(( time / 60 )) $(( time % 60 )))
     growl -e $(printf "port upgrade completed, %s:%#02d elapsed." $(( time / 60 )) $(( time % 60 )))
 }
 
@@ -512,7 +514,7 @@ function crisp() {
     text="-t \"$*\""
     eval "/Users/dan/Dropbox/Dev/APIs/Crisply/post-activity.rb \
 	-a dgerrity -k ${crisply_key} ${dur} ${act} ${tag} ${dt} ${text}"
-    log "posted to crisply: ${dt} ${dur} ${act} ${tag} ${text}"
+    clog "posted to crisply: ${dt} ${dur} ${act} ${tag} ${text}"
 }
 
 function amazon() {
@@ -775,7 +777,7 @@ function localid() {
 
 function bandwidth() {
     bw=$(printf "%'d bps\n" "$(iperf -c ${sierra} -yc | sed 's/.*,//')")
-    log "${bw} $(airport -I | grep " SSID:" | sed 's/.*SSID: //')"
+    clog "${bw} $(airport -I | grep " SSID:" | sed 's/.*SSID: //')"
     echo "${bw}"
 }
 
@@ -895,7 +897,7 @@ function edit() {
 # Code
 ###############################################################################
 
-logger "$(me) executed by $(ps -p $PPID -o args=), pid $$"
+logger -is "$(me) executed by $(ps -p $PPID -o args=), pid $$"
 fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcBrown=33; fgcRed=31; bgcGrey=47; bgcNone=49
 bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
@@ -969,7 +971,7 @@ alias loadprof="source $(me``); echo Profile revision ${bprev} loaded"
 alias logcat="cat ${lf}"
 alias logcatnet="cat ${logdir}/com.centvc.netwatch.log"
 alias logedit="edit ${lf}"
-alias logmark='log "------------------ M A R K --------------------"'
+alias logmark='clog "------------------ M A R K --------------------"'
 alias logopen="open ${lf}"
 alias logtail="tail -n50 ${lf}"
 alias logtailnet="tail -n50 ${logdir}/com.centvc.netwatch.log"
@@ -995,7 +997,7 @@ alias rcsversions="/bin/ls | sed 's/ /\\ /g' | xargs rlog | grep \"RCS\|head\" |
 alias rdiff="rcsdiff -wBy --left-column"
 alias rdiffc="rcsdiff -wBy --left-column --suppress-common-lines"
 alias roothere="su -m"
-alias reboot="log "Restarting..."; sudo shutdown -r now"
+alias reboot="clog "Restarting..."; sudo shutdown -r now"
 alias renew="sudo ipconfig set ${aptdev} DHCP"
 alias scpm="/usr/bin/scp -Ep"
 alias sdiff="diff -wBy --left-column"
@@ -1019,7 +1021,6 @@ alias et="emacsclient -t -a ~/bin/emacst"
 alias flushdns="sudo killall -HUP mDNSResponder"
 alias geek="osascript -e 'tell application \"Geektool\" to refresh all'"
 alias listapps="system_profiler SPApplicationsDataType"
-alias mute="vol off"
 alias osa="osascript -e"
 alias pasteclean="pbpaste | iconv -t ASCII//TRANSLIT >"
 alias pbclean="pbpaste | iconv -t ASCII//TRANSLIT | pbcopy | pbpaste"
@@ -1034,7 +1035,6 @@ alias rootkey="sudo '/Applications/Utilities/Keychain Access.app/Contents/MacOS/
 alias scripts="pushd ~/Library/Scripts/Applications > /dev/null"
 alias stanford="open http://snsr.stanford.edu/landing.html"
 alias switchprinter="lpoptions -d "
-alias unmute="vol on"
 
 utils="dig dnstrace dnstracer ftp host iperf nc nmap nslookup ping scutil ssh traceroute wget"
 if [[ $(/usr/bin/which brew) ]]; then

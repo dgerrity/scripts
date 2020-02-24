@@ -28,27 +28,31 @@ function symlink()
 symlink $(pwd)/.bash_env ~/.bash_env
 symlink $(pwd)/.bash_profile ~/.bash_profile
 symlink $(pwd)/.bashrc ~/.bashrc
-symlink $(pwd)/checkip /usr/local/bin/checkip
-symlink $(pwd)/defaults /usr/local/bin/defaults
-symlink $(pwd)/findprefs /usr/local/bin/findprefs
-symlink $(pwd)/hang /usr/local/bin/hang
-symlink $(pwd)/inline /usr/local/bin/inline
-symlink $(pwd)/ipinfo /usr/local/bin/ipinfo
-symlink $(pwd)/proxy /usr/local/bin/proxy
-symlink $(pwd)/scrab /usr/local/bin/scrab
-symlink $(pwd)/timedns /usr/local/bin/timedns
-symlink $(pwd)/watchnet /usr/local/bin/watchnet
+symlink $(pwd)/checkip ~/bin/checkip
+symlink $(pwd)/defaults ~/bin/defaults
+symlink $(pwd)/findprefs ~/bin/findprefs
+symlink $(pwd)/hang ~/bin/hang
+symlink $(pwd)/inline ~/bin/inline
+symlink $(pwd)/ipinfo ~/bin/ipinfo
+symlink $(pwd)/proxy ~/bin/proxy
+symlink $(pwd)/scrab ~/bin/scrab
+symlink $(pwd)/timedns ~/bin/timedns
+symlink $(pwd)/watchnet ~/bin/watchnet
+[[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ~/bin/airport
+
 [[ ! -d ~/Library/KeyBindings ]] && mkdir ~/Library/KeyBindings
 symlink $(pwd)/DefaultKeyBinding.dict ~/Library/KeyBindings/DefaultKeyBinding.dict
+
 symlink $(pwd)/init.el ~/.emacs.d/init.el
 [[ ! -d ~/.emacs.d/add-ins ]] && mkdir ~/.emacs.d/add-ins
 symlink $(pwd)/applescript.el ~/.emacs.d/add-ins/applescript.el
 symlink $(pwd)/editorconfig.el ~/.emacs.d/add-ins/editorconfig.el
 symlink $(pwd)/markdown-mode.el ~/.emacs.d/add-ins/markdown-mode.el
+
 echo "About to symbolically link (with sudo) $(pwd)/dict_scrabble /usr/share/dict/altscrab"
 sudo ln -s $(pwd)/dict_scrabble /usr/share/dict/altscrab
 symlink $(pwd)/org.gnu.emacsserver.plist ~/Library/LaunchAgents/org.gnu.emacsserver.plist
+
 symlink $(pwd)/config ~/.ssh/config
 echo "Copy com.centvc.socat_listener.plist if desired into ~/Library/LaunchAgents"
-
 

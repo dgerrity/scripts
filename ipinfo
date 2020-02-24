@@ -17,6 +17,8 @@ rsyncport=873
 ###############################################################################
 # Functions
 
+[[ -e ~/.bashrc ]] && source ~/.bashrc
+
 # Default addresses for important machines 
 for i in romeo sierra cookie tango; do export "${i}"="${i}.dnsdojo.com"; done
 case "$(hostname -s)" in
@@ -144,6 +146,7 @@ function showMACAddresses() {
 
 function showSSID() {
     rc=1
+    [[ ! -x airport ]] && return ${rc}
     ssid="$(airport -I | grep " SSID:" | sed 's/.*SSID: //')"
     if [[ ${ssid} ]]; then rc=0
     elif [[ "$(airport -I)" == "AirPort: Off" ]]; then
@@ -186,8 +189,8 @@ function showIfChanged() {
 	fi
     done < <(diff -wByb --left-column --suppress-common-lines ${new} ${old})
     for ((j=0; j<i; j++)); do
-	log "old: $(echo ${o} | cut -f $(( i+1 )) -d '|')"
-	log "new: $(echo ${n} | cut -f $(( i+1 )) -d '|')"
+	clog "old: $(echo ${o} | cut -f $(( i+1 )) -d '|')"
+	clog "new: $(echo ${n} | cut -f $(( i+1 )) -d '|')"
     done
     mv ${new} ${old}
     return 0
@@ -213,13 +216,13 @@ function mainprog() {
 
 #   SSID info
     if ! showSSID; then
-	log "problem with ssid ${ssid}"
+	clog "problem with ssid ${ssid}"
 	ssid=
     fi
 
     if ! showInterfaces; then
 	printl interfaces no-ip-addresses
-	log "early exit due  to no ip4 addresses assigned, rc=3"
+	clog "early exit due  to no ip4 addresses assigned, rc=3"
 	exit 3
     fi
 
@@ -257,7 +260,7 @@ function mainprog() {
     printl public: ${str} ${rDNS}
     if ! showMACAddresses; then
 	printl interfaces no-MAC-Addresses
-	log "early exit due  to no MAC addresses in use, rc=4"
+	clog "early exit due  to no MAC addresses in use, rc=4"
 	exit 4
     fi
 
@@ -295,9 +298,9 @@ done
 
 TIMEFORMAT="%R seconds"
 [[ ${o_debug} ]] && time mainprog || mainprog
-[[ ${rc} != 0 ]] && log "exit with rc ${rc}"
+[[ ${rc} != 0 ]] && clog "exit with rc ${rc}"
 let stoptime=$(date -j -f "%a %b %d %T %Z %Y" "$(date)" "+%s")
-log "$(( stoptime - starttime )) seconds"
+clog "$(( stoptime - starttime )) seconds"
 decho "$(( stoptime - starttime )) seconds"
 exit 0
 

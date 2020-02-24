@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ###############################################################################
 # Vol - a bash script that manipulates volume settings on the Mac.
@@ -99,6 +99,7 @@ function iTunesRunning() {
 function getCurrentSettings() {
     svol=$(sys "get (output volume of (get volume settings))")
     smuted=$(sys "get (output muted of (get volume settings))")
+    [[ ${verbose} ]] && echo "svol is ${svol}, smuted is ${smuted}"
     [[ "${smuted}" == "true" ]] && smuted="muted" || smuted="unmuted"
     if [[ ("$(iTunesRunning)") || (${o_launch}) ]]; then
 	ivol=$(it "sound volume as integer")
@@ -108,7 +109,6 @@ function getCurrentSettings() {
 }
 
 function main() {
-    echo "cmd is ${cmd}"
     case ${cmd} in
 	show) getCurrentSettings
 	      echo "System: ${svol} ${smuted}"
@@ -153,7 +153,6 @@ elif [[ (! ${2}) && (! $(echo ${1} | sed 's/[0-9]//g')) ]]; then
     cmd="set"; newvol=${1}; shift
 fi
 
-echo "cmd is ${cmd}"
 isitr=$(ps ax | grep -v 'grep\|Helper' | grep iTunes.app) # iTunes running?
 while getopts ":s:dpomuivhl" opt; do
     case ${opt} in
@@ -173,5 +172,4 @@ while getopts ":s:dpomuivhl" opt; do
 done	
 [[ ("${cmd}" == "") && ("${mute}" != "") ]] && cmd=${mute}
 
-echo "cmd is ${cmd}"
 main

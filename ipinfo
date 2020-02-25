@@ -19,8 +19,6 @@ rsyncport=873
 ###############################################################################
 # Functions
 
-[[ -e ~/.bashrc ]] && source ~/.bashrc
-
 # Default addresses for important machines 
 for i in romeo sierra cookie tango; do export "${i}"="${i}.dnsdojo.com"; done
 case "$(hostname -s)" in

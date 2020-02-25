@@ -31,14 +31,11 @@ function clog() {
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
 }
 
-<<<<<<< HEAD
 clog ".bashrc, path is \"${PATH}\""
 [[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && clog "path [${PATH}] does not think it has ${HOME}/bin, adding"
 [[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && PATH="${HOME}/bin:${PATH}"
 [[ -d /usr/local/sbin ]] && [[ ! "${PATH}" =~ /usr/local/sbin ]] && clog "path [${PATH}] does not think it has /usr/local/sbin, adding"
-=======
 [[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && PATH="${HOME}/bin:${PATH}"
->>>>>>> b48b5dc1ca243f6d51e630b6ab7d36a9355be4cd
 [[ -d /usr/local/sbin ]] && [[ ! "${PATH}" =~ /usr/local/sbin ]] && PATH="${PATH}:/usr/local/sbin"
 [[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH

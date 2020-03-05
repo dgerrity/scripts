@@ -202,8 +202,8 @@ function getFreePort() {
 
 function screen_share() {
     target=${1}
-    [[ ! $(echo ${target} | sed 's/[a-z]//g') ]] && target=${!target}
-    [[ ! $(scutil -r ${target}) ]] && echo "Cannot reach ${target}." && return 1
+    [[ ! $(echo "${target}" | sed 's/[a-z]//g') ]] && target=${!target}
+    [[ ! $(scutil -r "${target}") ]] && echo "Cannot reach ${target}." && return 1
     if [[ $(ps aux | grep ".*ssh.*-L.*localhost.*${target}" | grep -v grep) ]]; then
         echo "Tunnel already established."
 	return 0;
@@ -215,8 +215,8 @@ function screen_share() {
     fi
     ssport=$(getFreePort)
     echo "about to call ssh -f -NL ${ssport}:localhost:5900 ${target}"
-    [[ ${o_auto} ]] && autossh -M ${monport} -f -NL ${ssport}:localhost:5900 ${target} || \
-	ssh -f -NL ${ssport}:localhost:5900 ${target}
+    [[ ${o_auto} ]] && autossh -M ${monport} -f -NL ${ssport}:localhost:5900 "${target}" || \
+	ssh -f -NL ${ssport}:localhost:5900 "${target}"
     sleep 1
     open vnc://localhost:${ssport}
 }
@@ -1037,7 +1037,7 @@ alias stanford="open http://snsr.stanford.edu/landing.html"
 alias switchprinter="lpoptions -d "
 
 utils="dig dnstrace dnstracer ftp host iperf nc nmap nslookup ping scutil ssh traceroute wget"
-if [[ $(/usr/bin/which brew) ]]; then
+if [[ $(/usr/bin/which brew 2>/dev/null) ]]; then
     bp=$(brew --prefix)
     [[ -f ${bp}/etc/profile.d/bash_completion.sh ]] && source ${bp}/etc/profile.d/bash_completion.sh
     [[ -f ${bp}/etc/bash_completion ]] && source ${bp}/etc/bash_completion

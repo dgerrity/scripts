@@ -120,7 +120,7 @@ function mainProg() {
 ###############################################################################
 
 o_debug=
-o_talk=true
+o_talk=
 o_growl=true
 
 wakeCalled=$(date "+%Y-%m-%dT%H:%M:%S")

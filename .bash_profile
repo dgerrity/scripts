@@ -901,10 +901,10 @@ logger -is "$(me) executed by $(ps -p $PPID -o args=), pid $$"
 fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcBrown=33; fgcRed=31; bgcGrey=47; bgcNone=49
 bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
-    papa)          fgc=${fgcBrown};;
+    papamini)      fgc=${fgcBrown};;
     dgerrity-mac)  fgc=${fgcGrey};;
     zulu)          fgc=${fgcRed};;
-    deltagolf)     fgc=${fgcBlue};;
+    moira)         fgc=${fgcBlue};;
         * )        fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3
@@ -921,8 +921,8 @@ fi
 thishost="$(hostname -s | sed 's/[- ]/_/g')"
 virtualhosts="" #oscar mike kilo zulu uniform
 localhosts="${thishost} ${virtualhosts}"
-homehosts="deltagolf zulu sierra cookie roy derilect pi"
-remotehosts="whiskey bfvana cottage garage hoopyfrood kkc kritzman"
+homehosts="moira zulu papamini"
+remotehosts="" #whiskey bfvana cottage garage hoopyfrood kkc kritzman"
 sshhosts="${virtualhosts} ${localhosts} ${homehosts} ${remotehosts}"
 [[ -e ~/.ssh/config ]] && sshhosts="${sshhosts} $(cat ~/.ssh/config | grep "\." | grep -v "*" | awk '{print $2}')"
 dyndnshosts="${homehosts} ${remotehosts}"
@@ -931,8 +931,7 @@ for i in ${localhosts};  do eval export ${i}=\"${i}.local\"; done
 [[ ${platform} == Darwin ]] && \
     ip=$(ifconfig -m ${aptdev} | grep "inet " | cut -f2 -d' ') || \
     ip=$(ifconfig | grep "inet " | cut -f2 -d' ')
-[[ "${ip:0:6}" == "172.17" ]] && export roy=172.17.73.246
-[[ "${ip:0:7}" == "10.0.10" ]] && for i in ${homehosts}; do eval export ${i}=\"${i}.local\"; done
+[[ "${ip:0:9}" == "192.168.0" ]] && for i in ${homehosts}; do eval export ${i}=\"${i}.local\"; done
 
 [[ -r ~/Dropbox/Library/share/dict/altscrab ]] && export DEFAULT_DICT=~/Dropbox/Library/share/dict/altscrab
 

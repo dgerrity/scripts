@@ -25,23 +25,9 @@ function symlink()
 }
 
 [[ ! -e $(pwd)/.bashrc ]] && echo "Run this script from the git repo" && return 1
-<<<<<<< HEAD
-symlink $(pwd)/.bash_env ~/.bash_env
-symlink $(pwd)/.bash_profile ~/.bash_profile
-symlink $(pwd)/.bashrc ~/.bashrc
-symlink $(pwd)/checkip ~/bin/checkip
-symlink $(pwd)/defaults ~/bin/defaults
-symlink $(pwd)/findprefs ~/bin/findprefs
-symlink $(pwd)/hang ~/bin/hang
-symlink $(pwd)/inline ~/bin/inline
-symlink $(pwd)/ipinfo ~/bin/ipinfo
-symlink $(pwd)/proxy ~/bin/proxy
-symlink $(pwd)/scrab ~/bin/scrab
-symlink $(pwd)/timedns ~/bin/timedns
-symlink $(pwd)/watchnet ~/bin/watchnet
-[[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ~/bin/airport
 
-=======
+
+[[ ! -d ${HOME}/bin ]] && mkdir ${HOME}/bin
 symlink $(pwd)/.bash_env ${HOME}/.bash_env
 symlink $(pwd)/.bash_profile ${HOME}/.bash_profile
 symlink $(pwd)/.bashrc ${HOME}/.bashrc
@@ -55,7 +41,8 @@ symlink $(pwd)/proxy ${HOME}/bin/proxy
 symlink $(pwd)/scrab ${HOME}/bin/scrab
 symlink $(pwd)/timedns ${HOME}/bin/timedns
 symlink $(pwd)/watchnet ${HOME}/bin/watchnet
->>>>>>> b48b5dc1ca243f6d51e630b6ab7d36a9355be4cd
+[[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ${HOME}/bin/airport
+
 [[ ! -d ~/Library/KeyBindings ]] && mkdir ~/Library/KeyBindings
 symlink $(pwd)/DefaultKeyBinding.dict ~/Library/KeyBindings/DefaultKeyBinding.dict
 
@@ -72,6 +59,6 @@ symlink $(pwd)/org.gnu.emacsserver.plist ~/Library/LaunchAgents/org.gnu.emacsser
 symlink $(pwd)/config ~/.ssh/config
 echo "Copy com.centvc.socat_listener.plist if desired into ~/Library/LaunchAgents"
 echo "Assuming local sleepwatcher setup"
-symlink $(pwd)/wakeup ~/.wakup
+symlink $(pwd)/wakeup ~/.wakeup
 symlink $(pwd)/sleep ~/.sleep
 

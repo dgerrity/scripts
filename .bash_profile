@@ -37,6 +37,7 @@ function locker()   { mv "${1}" "${HOME}/Dropbox/Documents/Locker/";            
 function manpath()  { /usr/bin/manpath | tr ':' '\n';                             }
 function me()       { echo "${HOME}/.bash_profile";                               }
 function mute()     { osascript -e 'set volume with output muted';                }            
+function oracle()   { pushd ~/Oracle/Oracle\ Content/;                            }
 function path()     { echo $PATH | tr ':' '\n';                                   }
 function su()       { pwd -P > /tmp/.pushd; /usr/bin/su $@;                       }
 function sud()      { echo "${1}" > /tmp/.pushd; /usr/bin/su $@;                  }

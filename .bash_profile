@@ -200,6 +200,11 @@ function getFreePort() {
     echo ${freeport}
 }
 
+function share_mouse() {
+    target=${1:-zulu.dnsdojo.com}
+    autossh -M 15051 -N -f -L 24800:localhost:24800 zulu.dnsdojo.com
+}
+
 function screen_share() {
     target=${1}
     [[ ! $(echo "${target}" | sed 's/[a-z]//g') ]] && target=${!target}

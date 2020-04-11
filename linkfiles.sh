@@ -11,14 +11,14 @@ function symlink()
         echo "Usage: $FUNCNAME remote-path local-name";
         echo "ln -s remote-path local-name";
         return 1;
-    fi;
-    if [[ -e "${2}" ]]; then
-        echo "Local name ${2} exists, delete it first if you meant it";
+    elif [[ -L "${2}" ]]; then
         return 2;
-    fi;
-    if [[ ! -e "${1}" ]]; then
+    elif [[ -e "${2}" ]]; then
+	echo "Warning: Target file ${2} exists and is not a symlink."
+	return 3;
+    elif [[ ! -e "${1}" ]]; then
         echo "Remote file or directory ${1} doesn't exist";
-        return 3;
+        return 4;
     fi;
     echo "About to symlink ${1} to ${2}"
     ln -s "${1}" "${2}"
@@ -26,13 +26,16 @@ function symlink()
 
 [[ ! -e $(pwd)/.bashrc ]] && echo "Run this script from the git repo" && return 1
 
-
 [[ ! -d ${HOME}/bin ]] && mkdir ${HOME}/bin
+
 symlink $(pwd)/.bash_env ${HOME}/.bash_env
 symlink $(pwd)/.bash_profile ${HOME}/.bash_profile
 symlink $(pwd)/.bashrc ${HOME}/.bashrc
 symlink $(pwd)/checkip ${HOME}/bin/checkip
 symlink $(pwd)/defaults ${HOME}/bin/defaults
+symlink $(pwd)/ec ${HOME}/bin/ec
+symlink $(pwd)/emacsc ${HOME}/bin/emacsc
+symlink $(pwd)/emacst ${HOME}/bin/emacst
 symlink $(pwd)/findprefs ${HOME}/bin/findprefs
 symlink $(pwd)/hang ${HOME}/bin/hang
 symlink $(pwd)/inline ${HOME}/bin/inline
@@ -41,6 +44,7 @@ symlink $(pwd)/proxy ${HOME}/bin/proxy
 symlink $(pwd)/scrab ${HOME}/bin/scrab
 symlink $(pwd)/timedns ${HOME}/bin/timedns
 symlink $(pwd)/watchnet ${HOME}/bin/watchnet
+
 [[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ${HOME}/bin/airport
 
 [[ ! -d ~/Library/KeyBindings ]] && mkdir ~/Library/KeyBindings

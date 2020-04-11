@@ -16,7 +16,7 @@
     "^k" = "deleteToEndOfLine:";
 
 /* Escape- sequences                                                       */
-    "\033" = {
+    "\U001B" = {
 	"\033" = "escape:";			/* ESC-ESC */
 	"f" = "moveWordForward:";		/* ESC-f */
 	"b" = "moveWordBackward:";		/* ESC-b */
@@ -27,6 +27,8 @@
 	"^h" = "deleteWordBackward:";		/* ESC-Ctrl-H */
 	"\010" = "deleteWordBackward:";		/* ESC-backspace */
 	"\177" = "deleteWordBackward:";		/* ESC-delete */
+	"\UF728" = "deleteWordBackward:";	/* ESC-delete */
+	"\063" = "deleteWordBackward:";         /* ESC-delete bluetooth */
 	"w" = "selectToMark:";			/* ESC-w */
 	"l" = ("lowercaseWord:", "moveWordForward:");	/* ESC-l */
 	"u" = ("uppercaseWord:", "moveWordForward:");	/* ESC-u */

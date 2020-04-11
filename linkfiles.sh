@@ -44,7 +44,7 @@ symlink $(pwd)/watchnet ${HOME}/bin/watchnet
 [[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ${HOME}/bin/airport
 
 [[ ! -d ~/Library/KeyBindings ]] && mkdir ~/Library/KeyBindings
-symlink $(pwd)/DefaultKeyBinding.dict ~/Library/KeyBindings/DefaultKeyBinding.dict
+cp $(pwd)/DefaultKeyBinding.dict ~/Library/KeyBindings/DefaultKeyBinding.dict
 
 symlink $(pwd)/init.el ~/.emacs.d/init.el
 [[ ! -d ~/.emacs.d/add-ins ]] && mkdir ~/.emacs.d/add-ins

@@ -12,12 +12,13 @@ function symlink()
         echo "ln -s remote-path local-name";
         return 1;
     elif [[ -L "${2}" ]]; then
+        echo "Skipping echo $(\ls -l "${2}" | cut -c43-)"
         return 2;
     elif [[ -e "${2}" ]]; then
-	echo "Warning: Target file ${2} exists and is not a symlink."
+	echo "Not linking: Target file ${2} exists and is not a symlink."
 	return 3;
     elif [[ ! -e "${1}" ]]; then
-        echo "Remote file or directory ${1} doesn't exist";
+        echo "Not linking: Remote file or directory ${1} doesn't exist";
         return 4;
     fi;
     echo "About to symlink ${1} to ${2}"
@@ -56,13 +57,13 @@ symlink $(pwd)/applescript.el ~/.emacs.d/add-ins/applescript.el
 symlink $(pwd)/editorconfig.el ~/.emacs.d/add-ins/editorconfig.el
 symlink $(pwd)/markdown-mode.el ~/.emacs.d/add-ins/markdown-mode.el
 
-echo "About to symbolically link (with sudo) $(pwd)/dict_scrabble /usr/share/dict/altscrab"
-sudo ln -s $(pwd)/dict_scrabble /usr/share/dict/altscrab
-symlink $(pwd)/org.gnu.emacsserver.plist ~/Library/LaunchAgents/org.gnu.emacsserver.plist
+#echo "About to symbolically link (with sudo) $(pwd)/dict_scrabble /usr/share/dict/altscrab"
+#sudo ln -s $(pwd)/dict_scrabble /usr/share/dict/altscrab
 
-symlink $(pwd)/config ~/.ssh/config
-echo "Copy com.centvc.socat_listener.plist if desired into ~/Library/LaunchAgents"
-echo "Assuming local sleepwatcher setup"
+symlink $(pwd)/org.gnu.emacsserver.plist ~/Library/LaunchAgents/org.gnu.emacsserver.plist
 symlink $(pwd)/wakeup ~/.wakeup
 symlink $(pwd)/sleep ~/.sleep
+symlink $(pwd)/config ~/.ssh/config
+
+echo "Copy com.centvc.socat_listener.plist if desired into ~/Library/LaunchAgents"
 

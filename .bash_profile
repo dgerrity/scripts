@@ -484,6 +484,14 @@ function aria() {
     open "${url}"
 }
 
+function zoom() {
+    case "${1}" in
+      mari)    url="https://oracle.zoom.us/j/8102254232?pwd=ajBOWHdaNm9tNlNnM3U3U0Rod0FyZz09";;
+         *)    url="https://oracle.zoom.us/j/2069728366?pwd=T0V0NWl5WitEUHZHUWxsSUlkb1prdz09";;
+    esac;
+    open "${url}"
+}
+
 function forcesso() {
     open https://oradocs-corp.sites.us2.oraclecloud.com/authsite/home/
 }

@@ -32,6 +32,7 @@ function symlink()
 symlink $(pwd)/.bash_env ${HOME}/.bash_env
 symlink $(pwd)/.bash_profile ${HOME}/.bash_profile
 symlink $(pwd)/.bashrc ${HOME}/.bashrc
+symlink $(pwd)/known_mac_addresses ${HOME}/.knownmacaddresses
 symlink $(pwd)/checkip ${HOME}/bin/checkip
 symlink $(pwd)/defaults ${HOME}/bin/defaults
 symlink $(pwd)/ec ${HOME}/bin/ec

@@ -485,14 +485,10 @@ function aria() {
 }
 
 function zoom() {
-    case "${1}" in
-      mari)    url="https://oracle.zoom.us/j/8102254232?pwd=ajBOWHdaNm9tNlNnM3U3U0Rod0FyZz09";;
-   dmitriy)    url="https://oracle.zoom.us/my/dmitriy.gak?pwd=N3Zabzd2WldkM0xaVjR1RUo2d2lTUT09";;
-      clay)    url="https://oracle.zoom.us/j/880263348?pwd=Ulp5Q2ErZ2JRQXFEVFB6YzMxR09WUT09";;
-      cate)    url="https://oracle.zoom.us/j/880263348?pwd=Ulp5Q2ErZ2JRQXFEVFB6YzMxR09WUT09";;
-         *)    url="https://oracle.zoom.us/j/2069728366?pwd=T0V0NWl5WitEUHZHUWxsSUlkb1prdz09";;
-    esac;
-    open "${url}"
+    [[ -z ${1}  ]] && zoomvar="zoomdan" || [[ "${1}" == "me" ]] && zoomvar="zoomdan"
+    zoomvar="zoom${1}"
+    echo "Zooming ${1} (${!zoomvar})..."
+    open "${!zoomvar}"
 }
 
 function forcesso() {

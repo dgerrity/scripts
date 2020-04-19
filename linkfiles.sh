@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+!/usr/bin/env bash
 ################################################################################
 #
 # linkefiles.sh - sets up symlinks for the executables in this repo

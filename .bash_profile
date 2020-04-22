@@ -485,8 +485,8 @@ function aria() {
 }
 
 function zoom() {
-    [[ -z ${1}  ]] && zoomvar="zoomdan" || [[ "${1}" == "me" ]] && zoomvar="zoomdan"
-    zoomvar="zoom${1}"
+    [[ -z ${1}  ]] && zoomvar="zoomdan" || [[ "${1}" == "me" ]] && zoomvar="zoomdan" || \
+		zoomvar="zoom${1}"
     echo "Zooming ${1} (${!zoomvar})..."
     open "${!zoomvar}"
 }

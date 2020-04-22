@@ -203,7 +203,7 @@ function getFreePort() {
 
 function share_mouse() {
     target=${1:-zulu.dnsdojo.com}
-    autossh -M 15051 -N -f -L 24800:localhost:24800 zulu.dnsdojo.com
+    autossh -M $(getFreePort) -p 10022 -N -f -R 24800:localhost:24800 dan@papamini.dnsdojo.com
 }
 
 function screen_share() {

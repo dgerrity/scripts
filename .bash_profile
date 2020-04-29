@@ -202,8 +202,10 @@ function getFreePort() {
 }
 
 function share_mouse() {
-    target=${1:-zulu.dnsdojo.com}
-    autossh -M $(getFreePort) -p 10022 -N -f -R 24800:localhost:24800 dan@papamini.dnsdojo.com
+    gw=$(route -n get oracle.com | grep gateway)
+    [[ ! "${gw}" ]] && target="-p 10022 $(dig papamini.dnsdojo.com +short)" || target="zulu.local"
+    echo "Setting up reverse tunnel on 24800 using ${target}; need sudo to get a free port"
+    autossh -M $(getFreePort) -N -f -R 24800:localhost:24800 "dan@${target}"
 }
 
 function screen_share() {
@@ -490,6 +492,8 @@ function zoom() {
     echo "Zooming ${1} (${!zoomvar})..."
     open "${!zoomvar}"
 }
+
+function zoomcopy() { echo ${zoomdan} | pbcopy; echo ok; zoom me; }
 
 function forcesso() {
     open https://oradocs-corp.sites.us2.oraclecloud.com/authsite/home/

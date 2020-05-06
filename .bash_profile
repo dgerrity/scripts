@@ -202,18 +202,28 @@ function getFreePort() {
 }
 
 function share_mouse() {
+    local port="-p 22"
     gw=$(route -n get oracle.com | grep gateway)
-    [[ ! "${gw}" ]] && target="-p 10022 $(dig papamini.dnsdojo.com +short)" || target="zulu.local"
-    echo "Setting up reverse tunnel on 24800 using ${target}; need sudo to get a free port"
-    autossh -M $(getFreePort) -N -f -R 24800:localhost:24800 "dan@${target}"
+    if [[ ! "${gw}" ]]; then
+	port="-p 10022"
+	target="$(dig papamini.dnsdojo.com +short)"
+    else
+	target="zulu.local"
+    fi
+    echo "Setting up reverse tunnel on 24800 using ${target} on ${port}"
+    autossh -M $(getFreePort) ${port} -N -f -R 24800:localhost:24800 "dan@${target}"
 }
 
-function screen_share() {
-    target=${1}
-    [[ ! $(echo "${target}" | sed 's/[a-z]//g') ]] && target=${!target}
+function share_screen() {
+    [[ ! "${1}" ]] && echo "Usage: ${0} target" && return 2
+    target="${1}"
+    [[ ! $(echo "${target}" | sed 's/[a-z]//g') ]] && target="${!target}"
     [[ ! $(scutil -r "${target}") ]] && echo "Cannot reach ${target}." && return 1
-    if [[ $(ps aux | grep ".*ssh.*-L.*localhost.*${target}" | grep -v grep) ]]; then
-        echo "Tunnel already established."
+    line=$(ps aux | grep ".*ssh.*-L.*localhost:5900.*${target}" | grep -v grep)
+    if [[ "${line}" ]]; then
+	local port=$(echo "${line}" | sed -e 's/.*-L//' -e 's/:.*$//')
+	echo "Tunnel already open on port ${port}"
+	open vnc://localhost:${port}
 	return 0;
     fi
     echo "Starting screen sharing with ${target}"
@@ -222,7 +232,7 @@ function screen_share() {
 	monport=$(getFreePort);
     fi
     ssport=$(getFreePort)
-    echo "about to call ssh -f -NL ${ssport}:localhost:5900 ${target}"
+    echo "about to call (auto)ssh (-M ${monport} -f -NL ${ssport}:localhost:5900 ${target}"
     [[ ${o_auto} ]] && autossh -M ${monport} -f -NL ${ssport}:localhost:5900 "${target}" || \
 	ssh -f -NL ${ssport}:localhost:5900 "${target}"
     sleep 1
@@ -261,7 +271,7 @@ function newmd() {
     echo " " >> "${f}"
     echo "# ${title} #" >> "${f}"
     edit "${f}"
-    open -a Marked "${f}"
+    open "${f}"
 }
 
 function evernew() {

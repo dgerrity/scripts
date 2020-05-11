@@ -7,7 +7,7 @@
 
 function symlink() 
 { 
-    if [[ -z ${2} ]]; then
+    if [[ -z "${2}" ]]; then
         echo "Usage: $FUNCNAME remote-path local-name";
         echo "ln -s remote-path local-name";
         return 1;
@@ -25,46 +25,41 @@ function symlink()
     ln -s "${1}" "${2}"
 }
 
-[[ ! -e $(pwd)/.bashrc ]] && echo "Run this script from the git repo" && return 1
+[[ ! -e "$(pwd)/.bashrc" ]] && echo "Run this script from the git repo" && return 1
 
-[[ ! -d ${HOME}/bin ]] && mkdir ${HOME}/bin
+[[ ! -d "${HOME}/bin" ]] && mkdir "${HOME}/bin"
 
-symlink $(pwd)/.bash_env ${HOME}/.bash_env
-symlink $(pwd)/.bash_profile ${HOME}/.bash_profile
-symlink $(pwd)/.bashrc ${HOME}/.bashrc
-symlink $(pwd)/known_mac_addresses ${HOME}/.knownmacaddresses
-symlink $(pwd)/checkip ${HOME}/bin/checkip
-symlink $(pwd)/defaults ${HOME}/bin/defaults
-symlink $(pwd)/ec ${HOME}/bin/ec
-symlink $(pwd)/emacsc ${HOME}/bin/emacsc
-symlink $(pwd)/emacst ${HOME}/bin/emacst
-symlink $(pwd)/findprefs ${HOME}/bin/findprefs
-symlink $(pwd)/hang ${HOME}/bin/hang
-symlink $(pwd)/inline ${HOME}/bin/inline
-symlink $(pwd)/ipinfo ${HOME}/bin/ipinfo
-symlink $(pwd)/proxy ${HOME}/bin/proxy
-symlink $(pwd)/scrab ${HOME}/bin/scrab
-symlink $(pwd)/timedns ${HOME}/bin/timedns
-symlink $(pwd)/watchnet ${HOME}/bin/watchnet
+symlink "$(pwd)/.bash_env" "${HOME}/.bash_env"
+symlink "$(pwd)/.bash_profile" "${HOME}/.bash_profile"
+symlink "$(pwd)/.bashrc" "${HOME}/.bashrc"
+symlink "$(pwd)/known_mac_addresses" "${HOME}/.knownmacaddresses"
+symlink "$(pwd)/checkip" "${HOME}/bin/checkip"
+symlink "$(pwd)/defaults" "${HOME}/bin/defaults"
+symlink "$(pwd)/ec" "${HOME}/bin/ec"
+symlink "$(pwd)/emacsc" "${HOME}/bin/emacsc"
+symlink "$(pwd)/emacst" "${HOME}/bin/emacst"
+symlink "$(pwd)/findprefs" "${HOME}/bin/findprefs"
+symlink "$(pwd)/hang" "${HOME}/bin/hang"
+symlink "$(pwd)/inline" "${HOME}/bin/inline"
+symlink "$(pwd)/ipinfo" "${HOME}/bin/ipinfo"
+symlink "$(pwd)/proxy" "${HOME}/bin/proxy"
+symlink "$(pwd)/scrab" "${HOME}/bin/scrab"
+symlink "$(pwd)/timedns" "${HOME}/bin/timedns"
+symlink "$(pwd)/watchnet" "${HOME}/bin/watchnet"
 
-[[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ${HOME}/bin/airport
+[[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport "${HOME}/bin/airport"
 
 [[ ! -d ~/Library/KeyBindings ]] && mkdir ~/Library/KeyBindings
-cp $(pwd)/DefaultKeyBinding.dict ~/Library/KeyBindings/DefaultKeyBinding.dict
+cp "$(pwd)/DefaultKeyBinding.dict" "${HOME}/Library/KeyBindings/DefaultKeyBinding.dict"
 
-symlink $(pwd)/init.el ~/.emacs.d/init.el
-[[ ! -d ~/.emacs.d/add-ins ]] && mkdir ~/.emacs.d/add-ins
-symlink $(pwd)/applescript.el ~/.emacs.d/add-ins/applescript.el
-symlink $(pwd)/editorconfig.el ~/.emacs.d/add-ins/editorconfig.el
-symlink $(pwd)/markdown-mode.el ~/.emacs.d/add-ins/markdown-mode.el
+symlink "$(pwd)/init.el" "${HOME}/.emacs.d/init.el"
+[[ ! -d "${HOME}/.emacs.d/add-ins" ]] && mkdir "${HOME}/.emacs.d/add-ins"
+symlink "$(pwd)/applescript.el" "${HOME}/.emacs.d/add-ins/applescript.el"
+symlink "$(pwd)/editorconfig.el" "${HOME}/.emacs.d/add-ins/editorconfig.el"
+symlink "$(pwd)/markdown-mode.el" "${HOME}/.emacs.d/add-ins/markdown-mode.el"
+symlink "$(pwd)/wakeup" "${HOME}/.wakeup"
+symlink "$(pwd)/sleep" "${HOME}/.sleep"
+symlink "$(pwd)/config" "${HOME}/.ssh/config"
 
-#echo "About to symbolically link (with sudo) $(pwd)/dict_scrabble /usr/share/dict/altscrab"
-#sudo ln -s $(pwd)/dict_scrabble /usr/share/dict/altscrab
-
-symlink $(pwd)/org.gnu.emacsserver.plist ~/Library/LaunchAgents/org.gnu.emacsserver.plist
-symlink $(pwd)/wakeup ~/.wakeup
-symlink $(pwd)/sleep ~/.sleep
-symlink $(pwd)/config ~/.ssh/config
-
-echo "Copy com.centvc.socat_listener.plist if desired into ~/Library/LaunchAgents"
-
+echo ">> Copy com.centvc.socat_listener.plist if desired into ${HOME}/Library/LaunchAgents"
+echo ">> Copy $(pwd)/com.centvc.iperf3.plist if desired into ${HOME}/Library/LaunchAgents"

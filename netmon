@@ -12,14 +12,6 @@ import time
 
 def callback(store, keys, info):
   for key in keys:
-    now=datetime.date.today()
-    print #!/usr/bin/python
-
-from Foundation import *
-from SystemConfiguration import *
-
-def callback(store, keys, info):
-  for key in keys:
     print time.strftime("%Y-%m-%d %H:%M:%S"), key, SCDynamicStoreCopyValue(store, key)
 
 store = SCDynamicStoreCreate(None, 
@@ -28,7 +20,7 @@ store = SCDynamicStoreCreate(None,
                              None)
 SCDynamicStoreSetNotificationKeys(store,
                                   None,
-                                  ['State:/Network/Global/IPv4'])
+                                  ['State:/Network/Global/IPv4','State:/Network/Global/IPv6'])
 CFRunLoopAddSource(CFRunLoopGetCurrent(),
                    SCDynamicStoreCreateRunLoopSource(None, store, 0),
                    kCFRunLoopCommonModes)

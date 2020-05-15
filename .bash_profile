@@ -207,11 +207,27 @@ function share_mouse() {
     if [[ ! "${gw}" ]]; then
 	port="-p 10022"
 	target="$(dig papamini.dnsdojo.com +short)"
+	other="zulu.local"
     else
 	target="zulu.local"
+	other="$(dig papamini.dnsdojo.com +short)"
     fi
-    echo "Setting up reverse tunnel on 24800 using ${target} on ${port}"
+    already_running="$(ps axo pid,command | grep "".*[s]sh.*${target}"")"
+    if [[ "${already_running}" ]]; then
+	pid="$(echo ${already_running} | cut -f1 -d' ')"
+	echo "Tunnel already established, signalling pid ${pid}"
+	kill -HUP ${pid}
+    fi
+    other_running="$(ps axo pid,command | grep "".*[s]sh.*${other}"")"
+    monport="$(echo ${other_running} | sed 's/.*-L \([[:digit:]]*\):.*$/\1/')"
+    if [[ "${monport}" ]]; then
+	echo "Killing process using monitor port ${monport}"
+	kill "$(ps axo pid,command | grep "[s]sh.*M ${monport}" | cut -f1 -d' ')"
+    fi
+    echo "Setting up tunnel for port 24800 using ${target} on ${port}"
     autossh -M $(getFreePort) ${port} -N -f -R 24800:localhost:24800 "dan@${target}"
+    ssh "dan@${target}" open -a Synergy
+    open -a Synergy
 }
 
 function share_screen() {
@@ -955,8 +971,8 @@ sshhosts="${virtualhosts} ${localhosts} ${homehosts} ${remotehosts}"
 dyndnshosts="${homehosts} ${remotehosts}"
 for i in ${dyndnshosts}; do eval export ${i}=\"${i}.dnsdojo.com\"; done
 for i in ${localhosts};  do eval export ${i}=\"${i}.local\"; done
-[[ ${platform} == Darwin ]] && \
-    ip=$(ifconfig -m ${aptdev} | grep "inet " | cut -f2 -d' ') || \
+[[ "$(uname)" == Darwin ]] && \
+    ip=$(ifconfig -m "${aptdev}" | grep "inet " | cut -f2 -d' ') || \
     ip=$(ifconfig | grep "inet " | cut -f2 -d' ')
 [[ "${ip:0:9}" == "192.168.0" ]] && for i in ${homehosts}; do eval export ${i}=\"${i}.local\"; done
 
@@ -993,7 +1009,7 @@ alias googleh="google hints macworld os x"
 alias googlem="google os x"
 alias listfunc="compgen -A function | sort"
 alias listfuncg="compgen -A function | grep -i"
-alias loadprof="source $(me``); echo Profile revision ${bprev} loaded"
+alias loadprof="source $(me); echo Profile ${bprev} loaded"
 alias logcat="cat ${lf}"
 alias logcatnet="cat ${logdir}/com.centvc.netwatch.log"
 alias logedit="edit ${lf}"

@@ -20,7 +20,7 @@ rsyncport=873
 # Functions
 
 # Default addresses for important machines 
-for i in romeo sierra cookie tango; do export "${i}"="${i}.dnsdojo.com"; done
+for i in zulu papamini; do export "${i}"="${i}.dnsdojo.com"; done
 case "$(hostname -s)" in
     sierra)  export proxy=romeo.dnsdojo.com; export proxyport=34345;;
     zulu)   export aptdev=en0;;
@@ -35,7 +35,7 @@ function printl() {
 #   printl( str [str...] ); prints a formatted line
     [[ ! ${2} ]] && return
     title="${1}"; shift; val="${1}"; shift
-    [[ (${#val} -gt 17) && (${val:2:1} != ":") && (! ${o_markdown}) ]] &&  val="${val:0:13}..."
+    [[ (${#val} -gt 17) && (${val:2:1} != ":") && (! ${o_markdown}) && "${3}" ]] &&  val="${val:0:13}..."
     [[ "${o_markdown}" ]] && \
 	str=$(printf "| %-12s | %-18s | %-13s| %-10s| %-10s %s|" ${title} ${val} $*) || \
 	str=$(printf "%-12s %-17s %-13s %-10s %-10s %s" ${title} ${val} $*)
@@ -100,6 +100,7 @@ function showInterfaces() {
     for i in $(ifconfig -lu | grep -o "en.\|utun."); do
 	decho "Checking interface ${i}"
         line=$(ifconfig -m $i | grep "inet ")
+	line6=$(ifconfig -m ${i} | grep "inet6 " | awk '{print $2}' | sed 's/%.*$//')
 	[[ ! ${line} ]] && continue
 
 	rc=0
@@ -109,7 +110,10 @@ function showInterfaces() {
 	    ip="$(echo ${line} | awk '{print $2}')/${mask}"
         gw=$(netstat -nrf inet | grep -m1 "^.*UGS.*${i}$" | awk '{print $2}')
 	ab="$(osxDeviceFromInterface ${i})"
-        [[ ${ab} ]] && printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${ip} ${gw} ${i}
+        if [[ ${ab} ]]; then
+	    printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${ip} ${gw} ${i}
+	    [[ ${line6} ]] && printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${line6}
+	fi
     done
     return ${rc}
 }

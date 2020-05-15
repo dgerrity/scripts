@@ -1,2 +1,2 @@
 $(id -un)	ALL=(root) NOPASSWD: /bin/kill, /usr/bin/find, /usr/sbin/lsof, /usr/bin/find
-$(id -un)	ALL=(root) NOPASSWD: /usr/local/bin/emacs
+$(id -un)	ALL=(root) NOPASSWD: /usr/local/bin/emacs, /bin/ls, /usr/bin/plutil

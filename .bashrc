@@ -31,13 +31,9 @@ function clog() {
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
 }
 
-clog ".bashrc, path is \"${PATH}\""
-[[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && clog "path [${PATH}] does not think it has ${HOME}/bin, adding"
-[[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && PATH="${HOME}/bin:${PATH}"
-[[ -d /usr/local/sbin ]] && [[ ! "${PATH}" =~ /usr/local/sbin ]] && clog "path [${PATH}] does not think it has /usr/local/sbin, adding"
 [[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && PATH="${HOME}/bin:${PATH}"
 [[ -d /usr/local/sbin ]] && [[ ! "${PATH}" =~ /usr/local/sbin ]] && PATH="${PATH}:/usr/local/sbin"
-[[ -d /Applications/Postgres.app ]] && export PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
+[[ -d /Applications/Postgres.app ]] && PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH
 
 export DISPLAY=:0.0   
@@ -57,10 +53,12 @@ export EDITOR=emacs
 # Default addresses for important machines 
 # for i in romeo sierra cookie tango deltagolf zulu; do export "${i}"="${i}.dnsdojo.com"; done
 case "$(hostname -s)" in
-    romeo)   export daapserver=sierra.dnsdojo.com; export vpndev=utun1 aptdev=en1;;
-    sierra)  export proxy=romeo.dnsdojo.com; export proxyport=34345; aptdev=en1;;
+    zulu)         export daapserver=papamini.dnsdojo.com; export vpndev=utun1;;
+    dgerrity-me)  export proxy=papamini.dnsdojo.com; export proxyport=34345; aptdev=en0;;
     *);;
 esac
+
+export aptdev="$(networksetup -listnetworkserviceorder | grep Wi-Fi, | sed 's/.*\(...\))$/\1/')"
 export $(hostname -s | sed -e 's/[- ]/_/g' -e 's/[()]//g')="$(hostname)"
 
 [[ -e "${HOME}/.bash_env" ]] && source "${HOME}/.bash_env"

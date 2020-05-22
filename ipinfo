@@ -149,15 +149,10 @@ function showMACAddresses() {
 }
 
 function showSSID() {
-    rc=1
-    [[ ! -x airport ]] && return ${rc}
-    ssid="$(airport -I | grep " SSID:" | sed 's/.*SSID: //')"
-    if [[ ${ssid} ]]; then rc=0
-    elif [[ "$(airport -I)" == "AirPort: Off" ]]; then
-	ssid="${aptname}-is-off"
-    else
-	ssid="disconnected"
-    fi
+#   showSSID(); prints a line showing the current SSID
+    [[ "$(which airport)" ]] && ssid="$(airport -I | grep " SSID:" | sed 's/.*SSID: //')" || return 1
+    [[ "$(airport -I)" == "AirPort: Off" ]] && ssid="${aptname}-is-off"
+    [[ ! "${ssid}" ]] && ssid="disconnected"
     [[ "${o_markdown}" ]] && \
 	str=$(printf "| %-12s | %-17s | | |" "ssid:" "${ssid}") || \
 	str=$(printf "%-12s %s" "ssid:" "${ssid}")

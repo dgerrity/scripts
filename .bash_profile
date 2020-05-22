@@ -956,7 +956,7 @@ export PS1="\[\e]2;\u@\H - \j - \T\a\e[${bgc};${fgc}${bold}m\]\h:\w \\$\[\e[0m\]
 [[ ! ${SSH_CALLER} ]] && export SSH_CALLER=$(hostname -s)
 if [[ (${SSH_CLIENT}) && (${SSH_CALLER} == $(hostname -s)) ]]; then
     export PROMPT_DIRTRIM=2
-    export PS1="\h:\w \\$ "
+#    export PS1="\h:\w \\$ "
     export TERM=xterm
     tput init
 fi

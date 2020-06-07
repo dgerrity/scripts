@@ -20,11 +20,13 @@ stk=/tmp/volstack
 
 function usage() {
     echo "Usage: vol [verb [value]]"
-    echo "       vol value"; echo
-    echo "where verb is show, set, get, push, pop, mute, off, unmute, on, down, up, nap"
+    echo "       vol value";
+    echo "       vol nap [minutes]"; echo
+    echo "where verb is show, set, get, push, pop, mute, off, unmute, on, down, up"
     echo "      value is [0-100]"; echo
-    echo "Note that using 'set' or 'value' also unmutes the sound.  Nap is in minutes, default 30 minutes."
-    echo "Down or up will decrease or increase by 10%.  Off and mute are the same, as are on and unmute."
+    echo "Note that using 'set' or 'value' also unmutes the sound.  Nap defaults to 30 minutes when no"
+    echo "time is specified. Using down or up will decrease or increase by 10%.  Off and mute are the"
+    echo "same, as are on and unmute."; echo
     exit 1
 }
 

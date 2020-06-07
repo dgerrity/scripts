@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+###############################################################################
+#
+# join-next-zoom - will join the zoom URL appearing in the next calendar entry
+#
+# Requires icalBuddy: `$ brew install ical-buddy`
+#
+###############################################################################
+
+me="$(basename $0)"
+version="1.0"
+args="${@}"
+
+function usage() {
+#   Displays usage information
+    enter $FUNCNAME $LINENO "$@"
+    echo "${me} version ${version}"; echo
+    [[ "${1}" == "version" ]] && exit 1
+    echo "${me} joins the zoom URL for the next calendar entry"
+    echo "Usage: ${me} [options]"
+    echo "             --help"
+    echo "Optons"
+    echo "  -v           Verbose"
+    echo "  -d           Debug"
+    echo
+    [[ "${1}" == help ]] && exit 1
+    exit 1
+}
+
+###############################################################################
+# Functions
+###############################################################################
+
+# Debugging, logging, and message routines.
+function enter() {
+#   Call at the entry of each function for debugging purposes: enter $FUNCNAME $LINENO "$@"
+    [[ ! ${o_debug} ]] && return 0
+    ln=${2}; fn=${1}; shift; shift;
+    printf "Line %3s, %s" ${ln} ${fn}
+    [[ "$@" ]] && echo -en "( $(echo "$@" | sed 's/ /, /g') )"
+    echo
+}
+
+function vecho()   { [[ ${o_verbose} ]] && echo "${*}";        }
+function vechonr() { [[ ${o_verbose} ]] && echo -en "${*}";    }
+function vgrr()    { [[ ${o_verbose} ]] && grr "${*}";         }
+function decho()   { [[ ${o_debug}   ]] && echo "${*}";        }
+function don()     { [[ ${o_debug}   ]] && set -x;             }
+function doff()    { [[ ${o_debug}   ]] && set +x;             }
+
+function mainprog() {
+    nextevent="$(icalBuddy -ea -n eventsToday+3 | head)"
+    decho "nextevent is |${nextevent}|"
+    topic="$(echo ${nextevent} | sed 's/.*Topic: \(.*\) Time:.*$/\1/')"
+    decho "Topic is |${topic}|"
+    etime="$(echo ${nextevent} | sed 's/.* Time: \(.*[AP]M\).*$/\1/')"
+    decho "Time is |${etime}|"
+    zoomid="$(echo ${nextevent} | grep -o 'https:[a-zA-Z0-9/?-\.=]*')"
+    echo "Found zoom meeting ${zoomid}"
+    read -p "Join ${topic} starting at ${etime} [y]?" response
+    [[ (! "${response}") || ("${response}" == "y") ]] && open "${zoomid}" || echo "Skipping"
+}
+
+unset o_verbose o_debug
+while getopts "vd" option; do
+    decho "Top of getops: option ${option}, OPTARG ${OPTARG}, OPTIND ${OPTIND}, line ${@}"
+    decho "line after OPTIND is ${@:$OPTIND}"
+    lowerarg=$(echo "${OPTARG}" | tr [A-Z] [a-z])
+    case ${option} in
+	v) o_verbose=true;;
+	d) o_debug=true;;
+	:) echo "Required argument to -${option} not specified."
+	   exit 1;;
+	*) usage ${@};;
+    esac
+done
+
+if [[ ! $(which icalBuddy) ]]; then
+    echo "This script requires icalBuddy to be installed"
+    echo "$ brew install ical-buddy"
+    exit 2
+fi
+
+mainprog
+

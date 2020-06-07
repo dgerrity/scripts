@@ -1,6 +1,6 @@
 !/usr/bin/env bash
 ################################################################################
-#
+p#
 # linkefiles.sh - sets up symlinks for the executables in this repo
 #
 ################################################################################
@@ -25,6 +25,10 @@ function symlink()
     ln -s "${1}" "${2}"
 }
 
+function linkfile() {
+    symlink "$(pwd)/${1}" "${HOME}/bin/${1}"
+}    
+
 [[ ! -e "$(pwd)/.bashrc" ]] && echo "Run this script from the git repo" && return 1
 
 [[ ! -d "${HOME}/bin" ]] && mkdir "${HOME}/bin"
@@ -33,21 +37,28 @@ symlink "$(pwd)/.bash_env" "${HOME}/.bash_env"
 symlink "$(pwd)/.bash_profile" "${HOME}/.bash_profile"
 symlink "$(pwd)/.bashrc" "${HOME}/.bashrc"
 symlink "$(pwd)/known_mac_addresses" "${HOME}/.knownmacaddresses"
-symlink "$(pwd)/checkip" "${HOME}/bin/checkip"
-symlink "$(pwd)/defaults" "${HOME}/bin/defaults"
-symlink "$(pwd)/ec" "${HOME}/bin/ec"
-symlink "$(pwd)/emacsc" "${HOME}/bin/emacsc"
-symlink "$(pwd)/emacst" "${HOME}/bin/emacst"
-symlink "$(pwd)/findprefs" "${HOME}/bin/findprefs"
-symlink "$(pwd)/hang" "${HOME}/bin/hang"
-symlink "$(pwd)/inline" "${HOME}/bin/inline"
-symlink "$(pwd)/ipinfo" "${HOME}/bin/ipinfo"
-symlink "$(pwd)/proxy" "${HOME}/bin/proxy"
-symlink "$(pwd)/scrab" "${HOME}/bin/scrab"
-symlink "$(pwd)/timedns" "${HOME}/bin/timedns"
-symlink "$(pwd)/watchnet" "${HOME}/bin/watchnet"
+symlink "$(pwd)/wakeup" "${HOME}/.wakeup"
+symlink "$(pwd)/sleep" "${HOME}/.sleep"
+symlink "$(pwd)/config" "${HOME}/.ssh/config"
 
-[[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport "${HOME}/bin/airport"
+linkfile checkip
+linkfile defaults
+linkfile ec
+linkfile emacsc
+linkfile emacst
+linkfile findprefs
+linkfile hang
+linkfile inline
+linkfile ipinfo
+linkfile join-next-zoom
+linkfile proxy
+linkfile scrab
+linkfile timedns
+linkfile vol
+linkfile watchnet
+
+[[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && \
+    symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport "${HOME}/bin/airport"
 
 [[ ! -d ~/Library/KeyBindings ]] && mkdir ~/Library/KeyBindings
 cp "$(pwd)/DefaultKeyBinding.dict" "${HOME}/Library/KeyBindings/DefaultKeyBinding.dict"
@@ -57,9 +68,6 @@ symlink "$(pwd)/init.el" "${HOME}/.emacs.d/init.el"
 symlink "$(pwd)/applescript.el" "${HOME}/.emacs.d/add-ins/applescript.el"
 symlink "$(pwd)/editorconfig.el" "${HOME}/.emacs.d/add-ins/editorconfig.el"
 symlink "$(pwd)/markdown-mode.el" "${HOME}/.emacs.d/add-ins/markdown-mode.el"
-symlink "$(pwd)/wakeup" "${HOME}/.wakeup"
-symlink "$(pwd)/sleep" "${HOME}/.sleep"
-symlink "$(pwd)/config" "${HOME}/.ssh/config"
 
 echo ">> Copy com.centvc.socat_listener.plist if desired into ${HOME}/Library/LaunchAgents"
 echo ">> Copy $(pwd)/com.centvc.iperf3.plist if desired into ${HOME}/Library/LaunchAgents"

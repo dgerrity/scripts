@@ -226,8 +226,12 @@ function share_mouse() {
     fi
     echo "Setting up tunnel for port 24800 using ${target} on ${port}"
     autossh -M $(getFreePort) ${port} -N -f -R 24800:localhost:24800 "dan@${target}"
+    echo "Starting Synergy"
     ssh "dan@${target}" open -a Synergy
     open -a Synergy
+    ps axo pid,command | grep -i "${pro}"
+    pids="$(ps axo pid,command | grep -i ${pro} | awk '{print $1}')"
+    complete -W "${pids}" kk
 }
 
 function share_screen() {

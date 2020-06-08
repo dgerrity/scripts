@@ -49,16 +49,17 @@ function don()     { [[ ${o_debug}   ]] && set -x;             }
 function doff()    { [[ ${o_debug}   ]] && set +x;             }
 
 function mainprog() {
-    nextevent="$(icalBuddy -ea -n eventsToday+3 | head)"
-    decho "nextevent is |${nextevent}|"
-    topic="$(echo ${nextevent} | sed 's/.*Topic: \(.*\) Time:.*$/\1/')"
-    decho "Topic is |${topic}|"
-    etime="$(echo ${nextevent} | sed 's/.* Time: \(.*[AP]M\).*$/\1/')"
-    decho "Time is |${etime}|"
-    zoomid="$(echo ${nextevent} | grep -o 'https:[a-zA-Z0-9/?-\.=]*')"
-    echo "Found zoom meeting ${zoomid}"
-    read -p "Join ${topic} starting at ${etime} [y]?" response
-    [[ (! "${response}") || ("${response}" == "y") ]] && open "${zoomid}" || echo "Skipping"
+    fiveMins=$(date -v+5M "+%Y-%m-%d %H:%M:%S")
+    event="$(icalBuddy -ea -b '+++ ' -li 1 -n eventsFrom:"${fiveMins}" to:'tomorrow')"
+    decho "Event: |${event}|"; decho
+    topic=$(echo ${event} | sed 's/^\(.*\) location:.*$/\1/')
+    decho "Topic: |$topic|"
+    url=$(echo ${event} | sed 's|.*\(https://oracle.zoom.us[^ ]*\).*$|\1|')
+    decho $url
+    block=$(echo ${event} | grep -o "at [0-9]\?[0-9]:[0-9][0-9].*$")
+    decho "Block: |$block|"
+    read -p "Join ${topic} ${block}? [y]" response
+    [[ (! "${response}") || ("${response}" == "y") ]] && open "${url}" || echo "Skipping"
 }
 
 unset o_verbose o_debug

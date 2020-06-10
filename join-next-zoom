@@ -22,6 +22,7 @@ function usage() {
     echo "Optons"
     echo "  -v           Verbose"
     echo "  -d           Debug"
+    echo "  -m M         Go forward M minutes when checking events."
     echo
     [[ "${1}" == help ]] && exit 1
     exit 1
@@ -49,27 +50,33 @@ function don()     { [[ ${o_debug}   ]] && set -x;             }
 function doff()    { [[ ${o_debug}   ]] && set +x;             }
 
 function mainprog() {
-    fiveMins=$(date -v+5M "+%Y-%m-%d %H:%M:%S")
-    event="$(icalBuddy -ea -b '+++ ' -li 1 -n eventsFrom:"${fiveMins}" to:'tomorrow')"
+    enter $FUNCNAME $LINENO "$@"
+    offset="${o_minutes:-5}"
+    decho "Offset: |${offset}|"
+    fiveMins=$(date -v+${offset}M "+%Y-%m-%d %H:%M:%S")
+    decho "Target date: |${fiveMins}|"
+    event="$(icalBuddy -ea -b '' -li 1 -n eventsFrom:"${fiveMins}" to:'tomorrow')"
     decho "Event: |${event}|"; decho
     topic=$(echo ${event} | sed 's/^\(.*\) location:.*$/\1/')
     decho "Topic: |$topic|"
-    url=$(echo ${event} | sed 's|.*\(https://oracle.zoom.us[^ ]*\).*$|\1|')
+    url=$(echo ${event} | sed 's|.*\(https://oracle.zoom.us/j[^ ]*\).*$|\1|')
     decho $url
     block=$(echo ${event} | grep -o "at [0-9]\?[0-9]:[0-9][0-9].*$")
     decho "Block: |$block|"
-    read -p "Join ${topic} ${block}? [y]" response
+    read -p "Join ${topic} ${block}? [y] " response
     [[ (! "${response}") || ("${response}" == "y") ]] && open "${url}" || echo "Skipping"
 }
 
-unset o_verbose o_debug
-while getopts "vd" option; do
+unset o_verbose o_debug o_minutes
+while getopts ":vdm:" option; do
     decho "Top of getops: option ${option}, OPTARG ${OPTARG}, OPTIND ${OPTIND}, line ${@}"
     decho "line after OPTIND is ${@:$OPTIND}"
     lowerarg=$(echo "${OPTARG}" | tr [A-Z] [a-z])
     case ${option} in
 	v) o_verbose=true;;
 	d) o_debug=true;;
+	m) o_minutes="${OPTARG}"
+	   [[ $(echo ${o_minutes} | sed 's/[[:digit:]]//g') ]] && usage;;
 	:) echo "Required argument to -${option} not specified."
 	   exit 1;;
 	*) usage ${@};;
@@ -78,7 +85,12 @@ done
 
 if [[ ! $(which icalBuddy) ]]; then
     echo "This script requires icalBuddy to be installed"
-    echo "$ brew install ical-buddy"
+    if [[ $(which brew) ]]; then
+	read -p "Install icalBuddy through brew [y] " response
+	[[ (! "${response}") || ("${response}" == "y") ]] && brew install ical-buddy
+    else
+	echo "Easiest install is through homebrew at https://brew.sh/"
+    fi
     exit 2
 fi
 

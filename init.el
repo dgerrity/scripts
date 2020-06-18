@@ -14,7 +14,7 @@
  '(inhibit-startup-buffer-menu t)
  '(inhibit-startup-screen t)
  '(initial-scratch-message nil)
- '(package-selected-packages (quote (smartparens))))
+ '(package-selected-packages (quote (rainbow-delimiters smartparens))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

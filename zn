@@ -1,32 +1,17 @@
 #!/usr/bin/env bash
 ###############################################################################
 #
-# join-next-zoom - will join the zoom URL appearing in the next calendar entry
+# zn - zoom next - will join a specific zoom meeting from the list of
+# upcoming candidates in the calendar.
 #
-# Requires icalBuddy: `$ brew install ical-buddy`
+# Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 ###############################################################################
 
+domain_name="${ZOOM_DOMAIN:-zoom.us}"
 me="$(basename $0)"
 version="1.0"
 args="${@}"
-
-function usage() {
-#   Displays usage information
-    enter $FUNCNAME $LINENO "$@"
-    echo "${me} version ${version}"; echo
-    [[ "${1}" == "version" ]] && exit 1
-    echo "${me} joins the zoom URL for the next calendar entry"
-    echo "Usage: ${me} [options]"
-    echo "             --help"
-    echo "Optons"
-    echo "  -v           Verbose"
-    echo "  -d           Debug"
-    echo "  -m M         Go forward M minutes when checking events."
-    echo
-    [[ "${1}" == help ]] && exit 1
-    exit 1
-}
 
 ###############################################################################
 # Functions
@@ -44,39 +29,99 @@ function enter() {
 
 function vecho()   { [[ ${o_verbose} ]] && echo "${*}";        }
 function vechonr() { [[ ${o_verbose} ]] && echo -en "${*}";    }
-function vgrr()    { [[ ${o_verbose} ]] && grr "${*}";         }
 function decho()   { [[ ${o_debug}   ]] && echo "${*}";        }
 function don()     { [[ ${o_debug}   ]] && set -x;             }
 function doff()    { [[ ${o_debug}   ]] && set +x;             }
 
-function mainprog() {
+function usage() {
+#   Displays usage information
     enter $FUNCNAME $LINENO "$@"
-    offset="${o_minutes:-5}"
-    decho "Offset: |${offset}|"
-    fiveMins=$(date -v+${offset}M "+%Y-%m-%d %H:%M:%S")
-    decho "Target date: |${fiveMins}|"
-    event="$(icalBuddy -ea -b '' -li 1 -n eventsFrom:"${fiveMins}" to:'tomorrow')"
-    decho "Event: |${event}|"; decho
-    topic=$(echo ${event} | sed 's/^\(.*\) location:.*$/\1/')
-    decho "Topic: |$topic|"
-    url=$(echo ${event} | sed 's|.*\(https://oracle.zoom.us/j[^ ]*\).*$|\1|')
-    decho $url
-    block=$(echo ${event} | grep -o "at [0-9]\?[0-9]:[0-9][0-9].*$")
-    decho "Block: |$block|"
-    read -p "Join ${topic} ${block}? [y] " response
-    [[ (! "${response}") || ("${response}" == "y") ]] && open "${url}" || echo "Skipping"
+    echo "${me} version ${version}"; echo
+    [[ "${1}" == "version" ]] && exit 1
+    echo "${me} joins the zoom URL for upcoming calendar entries using the domain ${domain_name}"
+    echo "Usage: ${me} [options]"
+    echo "             --help"
+    echo "Optons"
+    echo "  -p           Prompt me anyway, even if there is only one event"
+    echo "  -v           Verbose"
+    echo "  -d           Debug"
+    echo "  -m M         Go forward M minutes when checking events."
+    echo "  -n domain    Override the default domain name (or set ZOOM_DOMAIN in environment)"
+    echo
+    exit 1
 }
 
-unset o_verbose o_debug o_minutes
-while getopts ":vdm:" option; do
+function mainprog() {
+    enter $FUNCNAME $LINENO "$@"
+    let i=-1
+    offset="${o_minutes:-5}"
+    offsetMins=$(date -v+${offset}M "+%Y-%m-%d %H:%M:%S %z")
+    decho "Checking for events beginning/ending with ${offsetMins}"
+    while read -r line; do
+	[[ ! ${line} ]] && continue
+	if [[ $(echo ${line} | grep "%%%") ]]; then
+	    decho "New event found: ${line}"
+	    topic[++i]=$(echo ${line} | sed 's/^%%%\(.*$\)/\1/')
+	    vecho "Topic: |${topic[i]}|"
+	elif [[ ! ${url[i]} && $(echo ${line} | grep "https://[[:alnum:]]*\.\?${domain_name}/[jms][^ ]*") ]]; then
+	    decho "Extracting URL from ${line}"
+	    url[i]=$(echo ${line} | grep -o "https://[[:alnum:]]*\.\?${domain_name}/[jms][^ ]*")
+	    vecho "URL: |${url[i]}|"
+	elif [[ ! ${block[i]} && $(echo ${line} | grep "[0-9]\{1,2\}:[0-9]\{2\} [AP]M - [0-9]\{1,2\}") ]]; then
+	    decho "Looking for time in ${line}"
+	    block[i]=$(echo ${line} | grep -o "[0-9]\{1,2\}:[0-9]\{2\} [AP]M.*$")
+	    vecho "Block: |${block[i]}|"
+	fi
+    done < <(icalBuddy -ea -b "%%%" eventsFrom:"${offsetMins}" to:"${offsetMins}")
+    vecho "Number of entries found: ${#topic[@]}"
+    n=${#topic[@]}
+    if [[ ${n} -eq 0 ]]; then
+        # No matching events	
+	vecho "No events at ${offsetMins}"
+	echo "No zoom meetings found."
+    elif [[ ${n} -eq 1 ]]; then
+        # Only one entry found
+	vecho "Single meeting: ${topic[0]}"zn
+	[[ ! ${url[0]} ]] && echo "Not a valid zoom meeting - skipping" && return 1
+	response=
+	[[ ${o_prompt} ]] && read -p "Join ${topic[0]}; ${block[0]}? [y] " response
+	if [[ (! ${response}) || (${response} == "y") ]]; then
+	    vecho "Joining ${url[0]}"
+	    echo "Joining ${topic[0]}..."
+	    open "${url[0]}"
+	else
+	    echo "Skipped"
+	fi
+    else
+        # More than one entry found
+	vecho "More than one entry found, processing"
+	for (( i=0; i<n; i++ )); do
+	    echo "$(( i+1 )) Join ${topic[i]}; ${block[i]}"
+	done	
+	read -p "Join which meeting? [cancel] " response
+	[[ (! "${response}") || ("${response}" == "cancel") ]] && return 1
+	[[ $(echo ${response} | sed 's/[0-9]*//g') ]] && echo "Invalid response - skipping" && return 2
+	[[ (${response} -gt ${n}) || (${response} -lt 1) ]] && echo "Invalid meeting number - skipping" && return 3
+	let response-=1
+	[[ ! ${url[response]} ]] && echo "Not a valid zoom meeting - skipping" && return 4
+	vecho "Joining ${url[response]}"
+	echo "Joining ${topic[0]}..."
+	open ${url[response]}
+    fi
+}
+
+unset o_verbose o_debug o_minutes o_prompt
+while getopts ":pvdm:n:" option; do
     decho "Top of getops: option ${option}, OPTARG ${OPTARG}, OPTIND ${OPTIND}, line ${@}"
     decho "line after OPTIND is ${@:$OPTIND}"
     lowerarg=$(echo "${OPTARG}" | tr [A-Z] [a-z])
     case ${option} in
+	p) o_prompt=true;;
 	v) o_verbose=true;;
-	d) o_debug=true;;
+	d) o_debug=true; o_verbose=true;;
 	m) o_minutes="${OPTARG}"
 	   [[ $(echo ${o_minutes} | sed 's/[[:digit:]]//g') ]] && usage;;
+	n) domain_name="${OPTARG}";;
 	:) echo "Required argument to -${option} not specified."
 	   exit 1;;
 	*) usage ${@};;

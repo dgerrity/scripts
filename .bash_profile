@@ -202,10 +202,10 @@ function getFreePort() {
 }
 
 function share_mouse() {
-    local port="-p 22"
+    local port="22"
     gw=$(route -n get oracle.com | grep gateway)
     if [[ ! "${gw}" ]]; then
-	port="-p 10022"
+	port="10022"
 	target="$(dig papamini.dnsdojo.com +short)"
 	other="zulu.local"
     else
@@ -225,12 +225,11 @@ function share_mouse() {
 	kill "$(ps axo pid,command | grep "[s]sh.*M ${monport}" | cut -f1 -d' ')"
     fi
     echo "Setting up tunnel for port 24800 using ${target} on ${port}"
-    autossh -M $(getFreePort) ${port} -N -f -R 24800:localhost:24800 "dan@${target}"
+    autossh -M $(getFreePort) -p ${port} -N -f -R 24800:localhost:24800 "dan@${target}"
     echo "Starting Synergy"
     ssh "dan@${target}" open -a Synergy
     open -a Synergy
-    ps axo pid,command | grep -i "${pro}"
-    pids="$(ps axo pid,command | grep -i ${pro} | awk '{print $1}')"
+    pids=$(ps axo pid,command | grep -i "[s]sh " | awk '{print $1}')
     complete -W "${pids}" kk
 }
 
@@ -368,7 +367,7 @@ function evermd() {
 
 function interview() {
     pushd . &> /dev/null
-    cd ~/Documents/Team/Interviews
+    cd "~/Oracle/Oracle Content/Secure/Team/Interviews"
     if [[ ${1} ]]; then
 	fn=$(echo "${1} ${2}" | tr ' ' '-' | tr "[:upper:]" "[:lower:]").md
 	open "https://www.linkedin.com/search/results/index/?keywords=${1}+${2}&origin=GLOBAL_SEARCH_HEADER"
@@ -377,7 +376,7 @@ function interview() {
 	    str="> I am [not] inclined to hire ${1} for the position of {} based on this one-hour, "
 	    str+="in-person interview conducted on $(date "+%Y-%m-%d").  I was assigned the competencies "
 	    str+="{}."
-	    echo -e "${str}  \n\n---\n\n" >> ${fn}
+	    echo -e "${str}  --- >> ${fn}"
 	else
 	    echo "${fn} already exists."
 	fi
@@ -1027,6 +1026,7 @@ alias mou='open -a "Mou" '
 alias repo='pushd ~/Repo/haikudeck > /dev/null'
 alias whosfilesharing="sudo lsof -i4TCP:548 | grep EST | sed 's/.* TCP \([0-9\.]*\):afp.*$/\1/'"
 alias whosonitunes="sudo lsof -i4TCP:548 | grep EST | sed 's/.* TCP \([0-9\.]*\):daa.*$/\1/'"
+alias wx='ansiwweather'
 
 # Better unix
 export CLICOLOR=1

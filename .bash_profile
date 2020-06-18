@@ -369,7 +369,7 @@ function interview() {
     pushd . &> /dev/null
     cd "~/Oracle/Oracle Content/Secure/Team/Interviews"
     if [[ ${1} ]]; then
-	fn=$(echo "${1} ${2}" | tr ' ' '-' | tr "[:upper:]" "[:lower:]").md
+	fn=$(echo "${1,,} ${2,,}" | tr ' ' '-').md
 	open "https://www.linkedin.com/search/results/index/?keywords=${1}+${2}&origin=GLOBAL_SEARCH_HEADER"
 	if [[ ! -f ${fn} ]]; then
 	    echo -n "# ${1} ${2}\n\n" > ${fn}
@@ -516,13 +516,13 @@ function aria() {
 }
 
 function zoom() {
-    [[ -z ${1}  ]] && zoomvar="zoomdan" || [[ "${1}" == "me" ]] && zoomvar="zoomdan" || \
-		zoomvar="zoom${1}"
-    echo "Zooming ${1} (${!zoomvar})..."
-    open "${!zoomvar}"
+    [[ -z ${1}  ]] && zoomvar="zoom_dan" || [[ "${1}" == "me" ]] && zoomvar="zoom_dan" || \
+		zoomvar="zoom_${1}"
+    echo "Zooming ${1} (${!zoomvar^^})..."
+    open "${!zoomvar^^}"
 }
 
-function zoomcopy() { echo ${zoomdan} | pbcopy; echo ok; zoom me; }
+function zoomcopy() { echo ${zoom_dan^^} | pbcopy; echo ok; zoom me; }
 
 function forcesso() {
     open https://oradocs-corp.sites.us2.oraclecloud.com/authsite/home/

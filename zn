@@ -8,7 +8,7 @@
 #
 ###############################################################################
 
-domain_name="${ZOOM_DOMAIN:-zoom.us}"
+base_url="${ZOOM_DOMAIN:-zoom.us}"
 me="$(basename $0)"
 version="1.0"
 args="${@}"
@@ -38,20 +38,24 @@ function usage() {
     enter $FUNCNAME $LINENO "$@"
     echo "${me} version ${version}"; echo
     [[ "${1}" == "version" ]] && exit 1
-    echo "${me} joins the zoom URL for upcoming calendar entries using the domain ${domain_name}"
+    echo "${me} joins the zoom URL for upcoming calendar entries using the domain ${base_url}"
     echo "Usage: ${me} [options]"
     echo "             --help"
     echo "Optons"
-    echo "  -p           Prompt me anyway, even if there is only one event"
-    echo "  -v           Verbose"
-    echo "  -d           Debug"
-    echo "  -m M         Go forward M minutes when checking events."
-    echo "  -n domain    Override the default domain name (or set ZOOM_DOMAIN in environment)"
+    echo "  -d           debug"
+    echo "  -v           verbose"
+    echo "  -p           prompt me before joining even if there is only one event"
+    echo "  -m minutes   go forward in time when checking events (5 minutes without this option)."
+    echo "  -n           start a new zoom meeting and copy to clipboard (uses ZOOM_ME in environment)"
+    echo "  -u base-url  override the default domain name of ${base_url} (or set ZOOM_DOMAIN in environment)"
+    echo "  -w name      join with name and copy to clipboard.  Uses the environment to join a call (ZOOM_\${name}"
     echo
+    echo "Be careful not to post environment variables in public repositories if they have passwords.  To use the \"with\" option,"
+    echo "Set environment variables to ZOOM_\${name} to join that person's zoom.  Use ZOOM_ME for yourself."
     exit 1
 }
 
-function mainprog() {
+function zoomical() {
     enter $FUNCNAME $LINENO "$@"
     let i=-1
     offset="${o_minutes:-5}"
@@ -63,9 +67,9 @@ function mainprog() {
 	    decho "New event found: ${line}"
 	    topic[++i]=$(echo ${line} | sed 's/^%%%\(.*$\)/\1/')
 	    vecho "Topic: |${topic[i]}|"
-	elif [[ ! ${url[i]} && $(echo ${line} | grep "https://[[:alnum:]]*\.\?${domain_name}/[jms][^ ]*") ]]; then
+	elif [[ ! ${url[i]} && $(echo ${line} | grep "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*") ]]; then
 	    decho "Extracting URL from ${line}"
-	    url[i]=$(echo ${line} | grep -o "https://[[:alnum:]]*\.\?${domain_name}/[jms][^ ]*")
+	    url[i]=$(echo ${line} | grep -o "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*")
 	    vecho "URL: |${url[i]}|"
 	elif [[ ! ${block[i]} && $(echo ${line} | grep "[0-9]\{1,2\}:[0-9]\{2\} [AP]M - [0-9]\{1,2\}") ]]; then
 	    decho "Looking for time in ${line}"
@@ -85,7 +89,7 @@ function mainprog() {
 	[[ ! ${url[0]} ]] && echo "Not a valid zoom meeting - skipping" && return 1
 	response=
 	[[ ${o_prompt} ]] && read -p "Join ${topic[0]}; ${block[0]}? [y] " response
-	if [[ (! ${response}) || (${response} == "y") ]]; then
+	if [[ (! ${response}) || (${response,,} == "y") ]]; then
 	    vecho "Joining ${url[0]}"
 	    echo "Joining ${topic[0]}..."
 	    open "${url[0]}"
@@ -99,7 +103,7 @@ function mainprog() {
 	    echo "$(( i+1 )) Join ${topic[i]}; ${block[i]}"
 	done	
 	read -p "Join which meeting? [cancel] " response
-	[[ (! "${response}") || ("${response}" == "cancel") ]] && return 1
+	[[ (! "${response}") || ("${response,,}" == "cancel") ]] && return 1
 	[[ $(echo ${response} | sed 's/[0-9]*//g') ]] && echo "Invalid response - skipping" && return 2
 	[[ (${response} -gt ${n}) || (${response} -lt 1) ]] && echo "Invalid meeting number - skipping" && return 3
 	let response-=1
@@ -110,34 +114,57 @@ function mainprog() {
     fi
 }
 
-unset o_verbose o_debug o_minutes o_prompt
-while getopts ":pvdm:n:" option; do
-    decho "Top of getops: option ${option}, OPTARG ${OPTARG}, OPTIND ${OPTIND}, line ${@}"
-    decho "line after OPTIND is ${@:$OPTIND}"
-    lowerarg=$(echo "${OPTARG}" | tr [A-Z] [a-z])
+function zoomwith() {
+    enter $FUNCNAME $LINENO "$@"
+    local envar="ZOOM_${o_with}"
+    decho "Trying zoom with ${envar}"
+    [[ ! ${!envar} ]] && echo "Cannot zoom ${o_with} because ${envar} is not found in the environment." && exit 6
+    echo "Joining ${o_with}\'s zoom..."
+    open "${!envar}"
+}
+
+function mainprog() {
+    enter $FUNCNAME $LINENO "$@"
+    if [[ ! $(which icalBuddy) ]]; then
+	echo "This script requires icalBuddy to be installed"
+	if [[ $(which brew) ]]; then
+	    read -p "Install icalBuddy through brew [y] " response
+	    [[ (! "${response}") || ("${response,,}" == "y") ]] && brew install ical-buddy
+	else
+	    echo "Easiest install is through homebrew at https://brew.sh/"
+	fi
+	exit 2
+    fi
+
+    [[ ${o_debug} ]] && for i in o_debug o_verbose o_prompt o_minutes o_with base_url o_verbose o_with; do
+	echo -n "${i}=${!i} "
+    done
+    decho
+    
+    [[ ${o_with} ]] && zoomwith || zoomical
+}
+
+##############################################################################
+# Process options
+##############################################################################
+
+unset o_verbose o_debug o_minutes o_prompt o_with
+while getopts ":dpm:nu:vw:" option; do
     case ${option} in
-	p) o_prompt=true;;
-	v) o_verbose=true;;
 	d) o_debug=true; o_verbose=true;;
+	p) o_prompt=true;;
 	m) o_minutes="${OPTARG}"
 	   [[ $(echo ${o_minutes} | sed 's/[[:digit:]]//g') ]] && usage;;
-	n) domain_name="${OPTARG}";;
-	:) echo "Required argument to -${option} not specified."
+	n) o_with="ME";;
+	u) base_url="${OPTARG,,}";;
+	v) o_verbose=true;;
+	w) o_with="${OPTARG^^}";;
+	:) echo "Required argument to -${OPTARG} not specified."
 	   exit 1;;
-	*) usage ${@};;
+	*) echo "Option -${option} not recognized."
+	   usage "${@}";;
     esac
 done
-
-if [[ ! $(which icalBuddy) ]]; then
-    echo "This script requires icalBuddy to be installed"
-    if [[ $(which brew) ]]; then
-	read -p "Install icalBuddy through brew [y] " response
-	[[ (! "${response}") || ("${response}" == "y") ]] && brew install ical-buddy
-    else
-	echo "Easiest install is through homebrew at https://brew.sh/"
-    fi
-    exit 2
-fi
 
 mainprog
 

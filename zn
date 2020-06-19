@@ -9,74 +9,80 @@
 ###############################################################################
 
 base_url="${ZOOM_DOMAIN:-zoom.us}"
-me="$(basename $0)"
+me=$(basename "$0")
 version="1.0"
-args="${@}"
 
 ###############################################################################
 # Functions
 ###############################################################################
 
-# Debugging, logging, and message routines.
+# Debugging routines
 function enter() {
-#   Call at the entry of each function for debugging purposes: enter $FUNCNAME $LINENO "$@"
+#   Call at the entry of each function for debugging purposes: enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     [[ ! ${o_debug} ]] && return 0
     ln=${2}; fn=${1}; shift; shift;
-    printf "Line %3s, %s" ${ln} ${fn}
-    [[ "$@" ]] && echo -en "( $(echo "$@" | sed 's/ /, /g') )"
+    printf "Line %3s, %s" "${ln}" "${fn}"
+    [[ "$*" ]] && echo -en "( $(echo "$*" | sed 's/ /, /g') )"
     echo
 }
 
-function vecho()   { [[ ${o_verbose} ]] && echo "${*}";        }
-function vechonr() { [[ ${o_verbose} ]] && echo -en "${*}";    }
-function decho()   { [[ ${o_debug}   ]] && echo "${*}";        }
-function don()     { [[ ${o_debug}   ]] && set -x;             }
-function doff()    { [[ ${o_debug}   ]] && set +x;             }
+function vecho()   { [[ ${o_verbose} ]] && echo "${*}";            }
+function vechonr() { [[ ${o_verbose} ]] && echo -en "${*}";        }
+function decho()   { [[ ${o_debug}   ]] && echo "${*}";            }
+function don()     { [[ ${o_debug}   ]] && set -x;                 }
+function doff()    { [[ ${o_debug}   ]] && set +x;                 }
+function dopen()   { [[ ${o_debug}   ]] && echo "$@" || open "$@"; }
 
 function usage() {
 #   Displays usage information
-    enter $FUNCNAME $LINENO "$@"
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     echo "${me} version ${version}"; echo
     [[ "${1}" == "version" ]] && exit 1
-    echo "${me} joins the zoom URL for upcoming calendar entries using the domain ${base_url}"
+    echo "${me} joins the zoom URL for upcoming iCal (Mac calendar) entries using the domain ${base_url}"
     echo "Usage: ${me} [options]"
     echo "             --help"
     echo "Optons"
     echo "  -d           debug"
     echo "  -v           verbose"
+    echo "  -c calendar  limit results to a those from a specific calendar (list with commas, no spaces)"
     echo "  -p           prompt me before joining even if there is only one event"
-    echo "  -m minutes   go forward in time when checking events (5 minutes without this option)."
+    echo "  -m minutes   go forward in time when checking events (5 minutes without this option)"
     echo "  -n           start a new zoom meeting and copy to clipboard (uses ZOOM_ME in environment)"
     echo "  -u base-url  override the default domain name of ${base_url} (or set ZOOM_DOMAIN in environment)"
-    echo "  -w name      join with name and copy to clipboard.  Uses the environment to join a call (ZOOM_\${name}"
+    echo "  -w name      join with name and copy to clipboard.  Uses the environment to join a call (ZOOM_NAME)"
+    echo "  -x calendar  exclude a list of calendars (commas, no spaces)"
     echo
     echo "Be careful not to post environment variables in public repositories if they have passwords.  To use the \"with\" option,"
-    echo "Set environment variables to ZOOM_\${name} to join that person's zoom.  Use ZOOM_ME for yourself."
+    echo "set environment variables to ZOOM_NAME to join that zoom belonging to name.  Use ZOOM_ME for yourself."
     exit 1
 }
 
 function zoomical() {
-    enter $FUNCNAME $LINENO "$@"
-    let i=-1
-    offset="${o_minutes:-5}"
-    offsetMins=$(date -v+${offset}M "+%Y-%m-%d %H:%M:%S %z")
-    decho "Checking for events beginning/ending with ${offsetMins}"
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    i=-1
+    offset="${o_minutes:-+5}"
+    offsetMins=$(date -v"${offset}M" "+%Y-%m-%d %H:%M:%S %z")
+    incexc=
+    [[ "${o_include}" ]] && incexc="-ic ${o_include}"
+    [[ "${o_exclude}" ]] && incexc="${incexc} -ec ${o_exclude}"
+    decho "Checking for events beginning/ending with ${offsetMins}, using ${incexc}"
     while read -r line; do
-	[[ ! ${line} ]] && continue
-	if [[ $(echo ${line} | grep "%%%") ]]; then
-	    decho "New event found: ${line}"
-	    topic[++i]=$(echo ${line} | sed 's/^%%%\(.*$\)/\1/')
-	    vecho "Topic: |${topic[i]}|"
-	elif [[ ! ${url[i]} && $(echo ${line} | grep "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*") ]]; then
-	    decho "Extracting URL from ${line}"
-	    url[i]=$(echo ${line} | grep -o "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*")
-	    vecho "URL: |${url[i]}|"
-	elif [[ ! ${block[i]} && $(echo ${line} | grep "[0-9]\{1,2\}:[0-9]\{2\} [AP]M - [0-9]\{1,2\}") ]]; then
-	    decho "Looking for time in ${line}"
-	    block[i]=$(echo ${line} | grep -o "[0-9]\{1,2\}:[0-9]\{2\} [AP]M.*$")
-	    vecho "Block: |${block[i]}|"
-	fi
-    done < <(icalBuddy -ea -b "%%%" eventsFrom:"${offsetMins}" to:"${offsetMins}")
+    	[[ ! ${line} ]] && continue
+    	if [[ $(echo "${line}" | grep "%%%") ]]; then
+    	    decho "New event found: ${line}"
+    	    topic[++i]=$(echo "${line}" | sed 's/^%%%\(.*$\)/\1/')
+    	    vecho "Topic: |${topic[i]}|"
+    	elif [[ ! ${url[i]} && $(echo "${line}" | grep "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*") ]]; then
+
+    	    decho "Extracting URL from ${line}"
+    	    url[i]=$(echo "${line}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*")
+    	    vecho "URL: |${url[i]}|"
+    	elif [[ ! ${block[i]} && $(echo "${line}" | grep "[0-9]\{1,2\}:[0-9]\{2\} [AP]M - [0-9]\{1,2\}") ]]; then
+    	    decho "Looking for time in ${line}"
+    	    block[i]=$(echo "${line}" | grep -o "[0-9]\{1,2\}:[0-9]\{2\} [AP]M.*$")
+    	    vecho "Block: |${block[i]}|"
+    	fi
+    done < <(icalBuddy "${incexc}" -ea -b "%%%" eventsFrom:"${offsetMins}" to:"${offsetMins}")
     vecho "Number of entries found: ${#topic[@]}"
     n=${#topic[@]}
     if [[ ${n} -eq 0 ]]; then
@@ -85,14 +91,14 @@ function zoomical() {
 	echo "No zoom meetings found."
     elif [[ ${n} -eq 1 ]]; then
         # Only one entry found
-	vecho "Single meeting: ${topic[0]}"zn
+	vecho "Single meeting: ${topic[0]}"
 	[[ ! ${url[0]} ]] && echo "Not a valid zoom meeting - skipping" && return 1
 	response=
-	[[ ${o_prompt} ]] && read -p "Join ${topic[0]}; ${block[0]}? [y] " response
+	[[ ${o_prompt} ]] && read -rp "Join ${topic[0]}; ${block[0]}? [y] " response
 	if [[ (! ${response}) || (${response,,} == "y") ]]; then
 	    vecho "Joining ${url[0]}"
 	    echo "Joining ${topic[0]}..."
-	    open "${url[0]}"
+	    dopen "${url[0]}"
 	else
 	    echo "Skipped"
 	fi
@@ -102,69 +108,87 @@ function zoomical() {
 	for (( i=0; i<n; i++ )); do
 	    echo "$(( i+1 )) Join ${topic[i]}; ${block[i]}"
 	done	
-	read -p "Join which meeting? [cancel] " response
+	read -rp "Join which meeting? [cancel] " response
 	[[ (! "${response}") || ("${response,,}" == "cancel") ]] && return 1
-	[[ $(echo ${response} | sed 's/[0-9]*//g') ]] && echo "Invalid response - skipping" && return 2
+	[[ $(echo "${response}" | sed 's/[0-9]*//g') ]] && echo "Invalid response - skipping" && return 2
 	[[ (${response} -gt ${n}) || (${response} -lt 1) ]] && echo "Invalid meeting number - skipping" && return 3
-	let response-=1
+	response-=1
 	[[ ! ${url[response]} ]] && echo "Not a valid zoom meeting - skipping" && return 4
 	vecho "Joining ${url[response]}"
 	echo "Joining ${topic[0]}..."
-	open ${url[response]}
+	dopen "${url[response]}"
     fi
 }
 
 function zoomwith() {
-    enter $FUNCNAME $LINENO "$@"
-    local envar="ZOOM_${o_with}"
-    decho "Trying zoom with ${envar}"
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    local envar="ZOOM_${o_with^^}"
     [[ ! ${!envar} ]] && echo "Cannot zoom ${o_with} because ${envar} is not found in the environment." && exit 6
-    echo "Joining ${o_with}\'s zoom..."
-    open "${!envar}"
+    echo "Joining ${o_with}'s zoom..."
+    dopen "${!envar}"
+}
+
+function validate_calendars() {
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    if [[ ${o_include} && ! $(icalBuddy -ic "${o_include}" calendars) ]]; then
+    	echo "No calendars matching list ${o_include} -- try icalBuddy calendars."
+    	exit 7
+    fi
+    if [[ ${o_exclude} && ! $(icalBuddy -ec "${o_exclude}" calendars) ]]; then
+    	echo "Invalid list of calendars to exclude ${o_exclude} -- try icalBuddy calendars."
+    fi
 }
 
 function mainprog() {
-    enter $FUNCNAME $LINENO "$@"
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     if [[ ! $(which icalBuddy) ]]; then
-	echo "This script requires icalBuddy to be installed"
-	if [[ $(which brew) ]]; then
-	    read -p "Install icalBuddy through brew [y] " response
-	    [[ (! "${response}") || ("${response,,}" == "y") ]] && brew install ical-buddy
-	else
-	    echo "Easiest install is through homebrew at https://brew.sh/"
-	fi
-	exit 2
+    	echo "This script requires icalBuddy to be installed"
+    	if [[ $(which brew) ]]; then
+    	    read -rp 'Install icalBuddy through brew [y] ' response
+    	    [[ ! ${response} || ("${response}" == "y") ]] && brew install ical-buddy
+    	else
+    	    echo "Easiest install is through homebrew at https://brew.sh/"
+    	fi
+    	exit 2
     fi
 
-    [[ ${o_debug} ]] && for i in o_debug o_verbose o_prompt o_minutes o_with base_url o_verbose o_with; do
-	echo -n "${i}=${!i} "
+    [[ ${o_debug} ]] && for i in base_url o_debug o_exclude o_include o_minutes o_prompt o_verbose o_with; do
+    	echo -n "${i}=\"${!i}\" "
     done
     decho
     
-    [[ ${o_with} ]] && zoomwith || zoomical
+    validate_calendars "$@"
+    
+    if [[ ${o_with} ]]; then
+	zoomwith "$@"
+    else
+	zoomical "$@"
+    fi
 }
 
 ##############################################################################
-# Process options
+# Options
 ##############################################################################
 
-unset o_verbose o_debug o_minutes o_prompt o_with
-while getopts ":dpm:nu:vw:" option; do
+unset o_debug o_exclude o_include o_minutes o_prompt o_verbose o_with
+while getopts ":c:dpm:nu:vw:x:" option; do
     case ${option} in
+	c) o_include=${OPTARG};;
 	d) o_debug=true; o_verbose=true;;
 	p) o_prompt=true;;
-	m) o_minutes="${OPTARG}"
-	   [[ $(echo ${o_minutes} | sed 's/[[:digit:]]//g') ]] && usage;;
-	n) o_with="ME";;
-	u) base_url="${OPTARG,,}";;
+	m) o_minutes=${OPTARG}
+	   [[ ! $(echo "${o_minutes}" | grep "^[-+]\?[0-9]\{1,4\}$") ]] && usage "$@"
+	   [[ ! $(echo "${o_minutes}" | grep "^[-+].*") ]] && o_minutes="+${o_minutes}";;
+	n) o_with="me";;
+	u) base_url=${OPTARG,,};;
 	v) o_verbose=true;;
-	w) o_with="${OPTARG^^}";;
+	w) o_with=${OPTARG^};;
+	x) o_exclude=${OPTARG};;
 	:) echo "Required argument to -${OPTARG} not specified."
 	   exit 1;;
 	*) echo "Option -${option} not recognized."
-	   usage "${@}";;
+	   usage "$@";;
     esac
 done
 
-mainprog
-
+mainprog "$@"

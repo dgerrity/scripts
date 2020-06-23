@@ -22,13 +22,13 @@ function enter() {
     [[ ! ${o_debug} ]] && return 0
     ln=${2}; fn=${1}; shift; shift;
     printf "Line %3s, %s" "${ln}" "${fn}"
-    [[ "$*" ]] && echo -en "( $(echo "$*" | sed 's/ /, /g') )"
+    [[ "$@" ]] && echo -en "( $(echo "$@" | sed 's/ /, /g') )"
     echo
 }
 
-function vecho()   { [[ ${o_verbose} ]] && echo "${*}";            }
-function vechonr() { [[ ${o_verbose} ]] && echo -en "${*}";        }
-function decho()   { [[ ${o_debug}   ]] && echo "${*}";            }
+function vecho()   { [[ ${o_verbose} ]] && echo "$@";              }
+function vechonr() { [[ ${o_verbose} ]] && echo -en "$@";          }
+function decho()   { [[ ${o_debug}   ]] && echo "$@";              }
 function don()     { [[ ${o_debug}   ]] && set -x;                 }
 function doff()    { [[ ${o_debug}   ]] && set +x;                 }
 function dopen()   { [[ ${o_debug}   ]] && echo "$@" || open "$@"; }
@@ -96,7 +96,6 @@ function zoomical() {
 	response=
 	[[ ${o_prompt} ]] && read -rp "Join ${topic[0]}; ${block[0]}? [y] " response
 	if [[ (! ${response}) || (${response,,} == "y") ]]; then
-	    vecho "Joining ${url[0]}"
 	    echo "Joining ${topic[0]}..."
 	    dopen "${url[0]}"
 	else
@@ -112,9 +111,7 @@ function zoomical() {
 	[[ (! "${response}") || ("${response,,}" == "cancel") ]] && return 1
 	[[ $(echo "${response}" | sed 's/[0-9]*//g') ]] && echo "Invalid response - skipping" && return 2
 	[[ (${response} -gt ${n}) || (${response} -lt 1) ]] && echo "Invalid meeting number - skipping" && return 3
-	response-=1
-	[[ ! ${url[response]} ]] && echo "Not a valid zoom meeting - skipping" && return 4
-	vecho "Joining ${url[response]}"
+	[[ ! ${url[ (( --response )) ]} ]] && echo "Not a valid zoom meeting - skipping" && return 4
 	echo "Joining ${topic[0]}..."
 	dopen "${url[response]}"
     fi

@@ -367,7 +367,7 @@ function evermd() {
 
 function interview() {
     pushd . &> /dev/null
-    cd "~/Oracle/Oracle Content/Secure/Team/Interviews"
+    cd "${HOME}/Oracle/Oracle Content/Secure/Team/Interviews"
     if [[ ${1} ]]; then
 	fn=$(echo "${1,,} ${2,,}" | tr ' ' '-').md
 	open "https://www.linkedin.com/search/results/index/?keywords=${1}+${2}&origin=GLOBAL_SEARCH_HEADER"
@@ -522,7 +522,7 @@ function zoom() {
     open "${!zoomvar^^}"
 }
 
-function zoomcopy() { echo ${zoom_dan^^} | pbcopy; echo ok; zoom me; }
+function zoomcopy() { echo ${zoom_me^^} | pbcopy; echo "copied to clipboard - use zn -w me to start"; }
 
 function forcesso() {
     open https://oradocs-corp.sites.us2.oraclecloud.com/authsite/home/
@@ -1036,6 +1036,7 @@ export REPLYTO="dan@gerrity.org"
 alias envp="env | sort -f"
 alias envg="env | sort -f | grep -i"
 alias hexdump="hexdump -C"
+alias htop="sudo htop"
 alias kk="sudo kill"
 alias keymgmt="man sshd-keygen-wrapper"
 alias lsof="sudo /usr/sbin/lsof"
@@ -1046,6 +1047,7 @@ alias roothere="su -m"
 alias reboot="clog "Restarting..."; sudo shutdown -r now"
 alias renew="sudo ipconfig set ${aptdev} DHCP"
 alias scpm="/usr/bin/scp -Ep"
+alias sd="sudo /sbin/shutdown -s +5"
 alias sdiff="diff -wBy --left-column"
 alias sdiffc="diff -wBy --left-column --suppress-common-lines"
 alias tree="find . -print | sed -e 's;[^/]*/;|____;g;s;____|; |;g'"

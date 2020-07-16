@@ -43,6 +43,7 @@ function usage() {
     echo "             --help"
     echo "Optons"
     echo "  -d           debug"
+    echo "  -h           this message"
     echo "  -v           verbose"
     echo "  -i           include all calendars like subscription and Siri suggested"
     echo "  -p           prompt me before joining even if there is only one event"
@@ -151,9 +152,10 @@ function mainprog() {
 ##############################################################################
 
 unset o_debug o_include o_minutes o_prompt o_verbose o_with
-while getopts ":dipm:nu:vw:" option; do
+while getopts ":dhipm:nu:vw:" option; do
     case ${option} in
 	d) o_debug=true; o_verbose=true;;
+	h) usage;;
 	i) o_include=true;;
 	m) o_minutes=${OPTARG}
 	   [[ ! $(echo "${o_minutes}" | grep "^[-+]\?[0-9]\{1,4\}$") ]] && usage "$@"

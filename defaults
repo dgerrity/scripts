@@ -38,7 +38,7 @@ function basename() { echo $(/usr/bin/basename $(echo "${*}" | sed 's/^-//')); }
 # Functions
 
 # Log a string.  Prefix it with the date, and indent if it's a nested script
-function log() {
+function clog() {
     [[ "${whorang:0:5}" == "login" ]] && let shlvl=0 || let shlvl=${SHLVL}-2
     sp=$(printf "%$((${shlvl}*4))s" " ")
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(basename $0) $@" >> "${lf}"
@@ -62,12 +62,12 @@ if [[ ${1} != find ]]; then
     [[ "$(echo ${dom} | grep -i launch)" ]] && \
 	echo "Warning: possible problem mixing preferences with launch agents."
     [[ (${op} == write) && ("${args}" == "") ]] && args='""'
-    log "${USER} executed defaults ${op} ${dom} ${key} ${args}"
+    clog "${USER} executed defaults ${op} ${dom} ${key} ${args}"
     logger "${USER} executed defaults ${op} ${dom} ${key} ${args}"
-    log "existing value: \"$(/usr/bin/defaults read ${dom} ${key} 2> /dev/null)\""
+    clog "existing value: \"$(/usr/bin/defaults read ${dom} ${key} 2> /dev/null)\""
     logger "existing value: \"$(/usr/bin/defaults read ${dom} ${key} 2> /dev/null)\""
     /usr/bin/defaults ${op} ${dom} ${key} ${args}
-    log "new value: \"$(/usr/bin/defaults read ${dom} ${key})\""
+    clog "new value: \"$(/usr/bin/defaults read ${dom} ${key})\""
     logger "new value: \"$(/usr/bin/defaults read ${dom} ${key})\""
     exit 0
 else

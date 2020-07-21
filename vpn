@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+###############################################################################
+#
+# vpn - starts or stops the vpn along with McAfee virus
+#       put in your path and make it executable by $ chmod +x vpn.
+#       If not in your path, execute with ./vpn start or ./vpn stop
+#
+###############################################################################
+
+if [[ (!${1}) || ("${1}" == "start") ]]; then
+   [[ $(ps aux | grep "[c]isco/anyconnect") ]] && osascript -e 'tell app "Cisco AnyConnect Secure Mobility Client" to quit'
+   echo "Enabling McAfee..."
+   sudo defaults write /Library/Preferences/com.mcafee.ssm.antimalware.plist OAS_Enable -bool True
+   sudo /usr/local/McAfee/AntiMalware/VSControl stop
+   sudo /usr/local/McAfee/AntiMalware/VSControl reload
+   echo "Starting VPN..."
+   open -a "Cisco AnyConnect Secure Mobility Client"
+elif [[ "${1}" == "stop" ]]; then
+   echo "Quitting Cisco..."
+   [[ $(ps aux | grep "[c]isco/anyconnect") ]] && osascript -e 'tell app "Cisco AnyConnect Secure Mobility Client" to quit'
+   echo "Stopping McAfee..."
+   sudo defaults write /Library/Preferences/com.mcafee.ssm.antimalware.plist OAS_Enable -bool False
+   sudo /usr/local/McAfee/AntiMalware/VSControl stop
+   sudo /usr/local/McAfee/AntiMalware/VSControl reload
+else
+    echo "Usage: vpn start|stop"
+fi
+
+

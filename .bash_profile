@@ -822,8 +822,10 @@ function localid() {
 }
 
 function bandwidth() {
-    bw=$(printf "%'d bps\n" "$(iperf -c ${sierra} -yc | sed 's/.*,//')")
-    clog "${bw} $(airport -I | grep " SSID:" | sed 's/.*SSID: //')"
+    bw=$(iperf3 -c papamini.local -J | \
+	jq '.intervals[].streams[].bits_per_second' | \
+	awk 'BEGIN{s=0;s2=0;}{s+=$1;s2+=$1^2;}END{printf "%3.0f +-%.0f Mbps\n", s/NR/10^6, sqrt((s2-s^2/NR)/NR)/10^6;}')
+    clog "bandwidth ${bw} $(airport -I | grep " SSID:" | sed 's/.*SSID: //')"
     echo "${bw}"
 }
 
@@ -1084,7 +1086,7 @@ alias scripts="pushd ~/Library/Scripts/Applications > /dev/null"
 alias stanford="open http://snsr.stanford.edu/landing.html"
 alias switchprinter="lpoptions -d "
 
-utils="dig dnstrace dnstracer ftp host iperf nc nmap nslookup ping scutil ssh traceroute wget"
+utils="dig dnstrace dnstracer ftp host iperf3 nc nmap nslookup ping scutil ssh traceroute wget"
 if [[ $(/usr/bin/which brew 2>/dev/null) ]]; then
     bp=$(brew --prefix)
     [[ -f ${bp}/etc/profile.d/bash_completion.sh ]] && source ${bp}/etc/profile.d/bash_completion.sh

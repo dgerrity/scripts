@@ -100,7 +100,7 @@ function showInterfaces() {
     for i in $(ifconfig -lu | grep -o "en.\|utun.."); do
 	decho "Checking interface ${i}"
         line="$(ifconfig -m ${i} | grep "inet ")"
-	line6="$(ifconfig -m ${i} | grep "inet6 " | awk '{print $2}' | sed 's/%.*$//')"
+	line6="$(ifconfig -m ${i} | grep "inet6 fe80" | awk '{print $2}' | sed 's/%.*$//')"
 	[[ ! ${line} ]] && continue
 
 	rc=0
@@ -108,11 +108,12 @@ function showInterfaces() {
         [[ "${o_markdown}" ]] && \
 	    ip="**$(echo ${line} | awk '{print $2}')**/${mask}" || \
 	    ip="$(echo ${line} | awk '{print $2}')/${mask}"
-        gw=$(netstat -nrf inet | grep -m1 "^.*UGS.*${i}.*$" | awk '{print $2}')
+        gw="$(netstat  -nrf inet  | grep -m1 "^.*UGS.*${i}.*$" | awk '{print $2}')"
+	gw6="$(netstat -nrf inet6 | grep -m1 "^.*UGc.*${i}.*$" | awk '{print $2}' | sed 's/%.*$//')"
 	ab="$(osxDeviceFromInterface ${i})"
         if [[ ${ab} ]]; then
 	    printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${ip} ${gw} ${i}
-	    [[ ${line6} ]] && printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${line6}
+	    [[ ${line6} ]] && printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${line6} ${gw6} ${i}
 	fi
     done
     return ${rc}

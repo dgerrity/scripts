@@ -822,11 +822,17 @@ function localid() {
 }
 
 function bandwidth() {
-    bw=$(iperf3 -c papamini.local -J | \
+    [[ ! -z "${1}" ]] && server="${1}" || server=papamini.local
+    iface="$(route get ${server} | grep interface | awk '{print $2}')"
+    bmac=$(fixmac "$(airport -I | grep BSSID | awk '{print $2}')")
+    bmacname="$(grep ${bmac} ~/.knownmacaddresses | sed 's/^[0-9a-f:]* //')"
+    echo "Testing bandwidth to ${server}, using interface ${iface}, and base station ${bmacname} (${bmac})"
+    clog "Testing bandwidth to ${server}, using interface ${iface}, and base station ${bmacname} (${bmac})"
+    bw=$(iperf3 -c "${server}" -J | \
 	jq '.intervals[].streams[].bits_per_second' | \
 	awk 'BEGIN{s=0;s2=0;}{s+=$1;s2+=$1^2;}END{printf "%3.0f +-%.0f Mbps\n", s/NR/10^6, sqrt((s2-s^2/NR)/NR)/10^6;}')
-    clog "bandwidth ${bw} $(airport -I | grep " SSID:" | sed 's/.*SSID: //')"
     echo "${bw}"
+    clog "${bw}"
 }
 
 function basestations() {

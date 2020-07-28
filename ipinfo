@@ -97,10 +97,10 @@ function showServer() {
 function showInterfaces() {
 #   showInterfaces(); lists information about each interface that is up
     rc=1
-    for i in $(ifconfig -lu | grep -o "en.\|utun."); do
+    for i in $(ifconfig -lu | grep -o "en.\|utun.."); do
 	decho "Checking interface ${i}"
-        line=$(ifconfig -m $i | grep "inet ")
-	line6=$(ifconfig -m ${i} | grep "inet6 " | awk '{print $2}' | sed 's/%.*$//')
+        line="$(ifconfig -m ${i} | grep "inet ")"
+	line6="$(ifconfig -m ${i} | grep "inet6 " | awk '{print $2}' | sed 's/%.*$//')"
 	[[ ! ${line} ]] && continue
 
 	rc=0
@@ -108,7 +108,7 @@ function showInterfaces() {
         [[ "${o_markdown}" ]] && \
 	    ip="**$(echo ${line} | awk '{print $2}')**/${mask}" || \
 	    ip="$(echo ${line} | awk '{print $2}')/${mask}"
-        gw=$(netstat -nrf inet | grep -m1 "^.*UGS.*${i}$" | awk '{print $2}')
+        gw=$(netstat -nrf inet | grep -m1 "^.*UGS.*${i}.*$" | awk '{print $2}')
 	ab="$(osxDeviceFromInterface ${i})"
         if [[ ${ab} ]]; then
 	    printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${ip} ${gw} ${i}

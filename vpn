@@ -7,7 +7,7 @@
 #
 ###############################################################################
 
-if [[ (!${1}) || ("${1}" == "start") ]]; then
+if [[ "${1}" == "start" ]]; then
    [[ $(ps aux | grep "[c]isco/anyconnect") ]] && osascript -e 'tell app "Cisco AnyConnect Secure Mobility Client" to quit'
    echo "Enabling McAfee..."
    sudo defaults write /Library/Preferences/com.mcafee.ssm.antimalware.plist OAS_Enable -bool True

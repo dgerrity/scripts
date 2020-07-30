@@ -959,7 +959,8 @@ case $(hostname -s) in
     dgerrity-mac)  fgc=${fgcGrey};;
     zulu)          fgc=${fgcRed};;
     moira)         fgc=${fgcBlue};;
-        * )        fgc=${fgcBlack}; bgc=${bgcGrey};;
+    arm)           fgc=${fgcBlue};;
+     * )           fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3
 export PS1="\[\e]2;\u@\H - \j - \T\a\e[${bgc};${fgc}${bold}m\]\h:\w \\$\[\e[0m\] "
@@ -975,7 +976,7 @@ fi
 thishost="$(hostname -s | sed 's/[- ]/_/g')"
 virtualhosts="" #oscar mike kilo zulu uniform
 localhosts="${thishost} ${virtualhosts}"
-homehosts="moira zulu papamini"
+homehosts="moira zulu papamini arm"
 remotehosts="" #whiskey bfvana cottage garage hoopyfrood kkc kritzman"
 sshhosts="${virtualhosts} ${localhosts} ${homehosts} ${remotehosts}"
 [[ -e ~/.ssh/config ]] && sshhosts="${sshhosts} $(cat ~/.ssh/config | grep "\." | grep -v "*" | awk '{print $2}')"
@@ -1092,38 +1093,40 @@ alias scripts="pushd ~/Library/Scripts/Applications > /dev/null"
 alias stanford="open http://snsr.stanford.edu/landing.html"
 alias switchprinter="lpoptions -d "
 
-utils="dig dnstrace dnstracer ftp host iperf3 nc nmap nslookup ping scutil ssh traceroute wget"
-if [[ $(/usr/bin/which brew 2>/dev/null) ]]; then
-    bp=$(brew --prefix)
-    [[ -f ${bp}/etc/profile.d/bash_completion.sh ]] && source ${bp}/etc/profile.d/bash_completion.sh
-    [[ -f ${bp}/etc/bash_completion ]] && source ${bp}/etc/bash_completion
-else
-    unset list; for i in ${sshhosts}; do list="${list} ${!i}"; done 
-    complete -o default -W "${list}" homeshare
-    unset list; for i in ${dyndnshosts}; do list="${list} ${!i}"; done
-    complete -o default -W "${list}" ${utils} open
-    list="${sshhosts} imap.gmail.com smtp.gmail.com checkip.dyndns.com"
-    complete -o default -W "${list}"  ${utils}
-    unset list; for i in ${sshhosts}; do list="${list} ${!i}:\~/"; done
-    complete -o default -o nospace -W "${list}" scp
-    complete -o default -A alias "$(compgen -A alias)"
-    complete -o default -A function "$(compgen -A function)"
-    complete -d pushd
-    complete -u su usermod userdel passwd chage write chfn groups slay w
-    complete -g groupmod groupdel newgrp 2>/dev/null
-    complete -A stopped -P '%' bg
-    complete -j -P '%' fg jobs disown
-    complete -v readonly unset
-    complete -A setopt set
-    complete -A shopt shopt
-    complete -A helptopic help
-    complete -a unalias
-    complete -A binding bind
-    complete -c command type which
-    complete -b builtin
-    complete -W "$([[ -d ~/bin ]] && /bin/ls ~/bin)" editw
-fi
-
+this_shell="$(ps -p $$ -o command= | sed -e's/^[.-]//' -e 's/[ -].*//')"
+if [[ "${this_shell,,}" == "bash" ]]; then
+    utils="dig dnstrace dnstracer ftp host iperf3 nc nmap nslookup ping scutil ssh traceroute wget"
+    if [[ $(/usr/bin/which brew 2>/dev/null) ]]; then
+	bp=$(brew --prefix)
+	[[ -f ${bp}/etc/profile.d/bash_completion.sh ]] && source ${bp}/etc/profile.d/bash_completion.sh
+	[[ -f ${bp}/etc/bash_completion ]] && source ${bp}/etc/bash_completion
+    else
+	unset list; for i in ${dyndnshosts}; do list="${list} ${!i}"; done
+	complete -o default -W "${list}" ${utils} open
+	list="${sshhosts} imap.gmail.com smtp.gmail.com checkip.dyndns.com"
+	complete -o default -W "${list}" "${utils}"
+	unset list; for i in ${sshhosts}; do list="${list} ${!i}:\~/"; done
+	complete -o default -o nospace -W "${list}" scp
+	complete -o default -A alias "$(compgen -A alias)"
+	complete -o default -A function "$(compgen -A function)"
+	complete -d pushd
+	complete -u su usermod userdel passwd chage write chfn groups slay w
+	complete -g groupmod groupdel newgrp 2>/dev/null
+	complete -A stopped -P '%' bg
+	complete -j -P '%' fg jobs disown
+	complete -v readonly unset
+	complete -A setopt set
+	complete -A shopt shopt
+	complete -A helptopic help
+	complete -a unalias
+	complete -A binding bind
+	complete -c command type which
+	complete -b builtin
+	complete -W "$([[ -d ~/bin ]] && /bin/ls ~/bin)" editw
+    fi
+	
 [[ -e "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"
 
 [[ -e "/usr/local/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/usr/local/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"
+
+fi

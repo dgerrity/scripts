@@ -368,15 +368,16 @@ function evermd() {
 function interview() {
     pushd . &> /dev/null
     cd "${HOME}/Oracle/Oracle Content/Secure/Team/Interviews"
+    echo "Directory pushed, available with popd"
     if [[ ${1} ]]; then
-	fn=$(echo "${1,,} ${2,,}" | tr ' ' '-').md
+	fn="$(echo "${1,,} ${2,,}" | tr ' ' '-').md"
 	open "https://www.linkedin.com/search/results/index/?keywords=${1}+${2}&origin=GLOBAL_SEARCH_HEADER"
-	if [[ ! -f ${fn} ]]; then
-	    echo -n "# ${1} ${2}\n\n" > ${fn}
+	if [[ ! -f "${fn}" ]]; then
+	    printf "# ${1} ${2}\n\n" > "${fn}"
 	    str="> I am [not] inclined to hire ${1} for the position of {} based on this one-hour, "
 	    str+="in-person interview conducted on $(date "+%Y-%m-%d").  I was assigned the competencies "
 	    str+="{}."
-	    echo -e "${str}  --- >> ${fn}"
+	    printf "${str}  ---" >> "${fn}"
 	else
 	    echo "${fn} already exists."
 	fi

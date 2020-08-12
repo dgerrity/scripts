@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+###############################################################################
+#
+# Monitors bandwidth indefinitely and uses "say" when bandwidth is low.
+#
+#
+###############################################################################
+
+o_client="papamini.local"
+o_st_limit=80
+o_ip_limit=150
+
+function cbasename() { echo $(/usr/bin/basename $(echo "${*}" | sed 's/^-//')); }
+function clog() {
+    [[ "${whorang:0:5}" == "login" ]] && let shlvl=0 || let shlvl=${SHLVL}-1
+    sp=$(printf "%$((${shlvl}*4))s" " ")
+    echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
+}
+
+while true; do
+    bw=$(( $(speedtest --no-upload --json | jq '.download' | cut -f1 -d'.') / 1000000 ))
+    if [[ ${bw} -lt 80 ]]; then
+	say "Low bandwidth of $bw} mega bits per second detected on $(hostname)"
+	clog "${bw} Mbps from speedtest (immediately prior was ${last})"
+    else
+	sleep 60
+    fi
+    last=${bw}
+done &
+
+while true; do
+    wifibw=$(iperf3 -c papamini.local -J | jq '.intervals[].streams[].bits_per_second' | awk 'BEGIN{s=0;}{s+=$1;}END{printf "%3.0f\n", s/NR/10^6}');
+    if [[ ${wifibw} -lt 150 ]]; then
+	say "Low wi-fi bandwidth of ${wifibw} detected on $(hostname)"
+	clog "${wifibw} Mbps from iperf (immediately prior was ${lastwf})"
+    else 
+	sleep 60
+    fi
+    lastwf=${wifibw}
+done &
+

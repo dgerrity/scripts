@@ -23,18 +23,22 @@ echo "Using ${o_ip_limit} for iperf3 bandwidth limit"
 echo "Using ${o_sleep} as the sleep interval"
 while true; do
     bw=$(( $(speedtest --no-upload --json | jq '.download' | cut -f1 -d'.') / 1000000 ))
-    if [[ ${bw} -lt 80 ]]; then
+    if [[ ${bw} -lt ${o_st_limit} ]]; then
 	say "Low bandwidth of $bw} mega bits per second detected on $(hostname)"
 	clog "${bw} Mbps from speedtest (immediately prior was ${last})"
+	echo "${bw} Mbps from speedtest (immediately prior was ${last})"
+	ipinfo -n
     else
 	echo "Speetest bandwidth ${bw} Mbps"
 	last=${bw}
     fi
 
     wifibw=$(iperf3 -c papamini.local -J | jq '.intervals[].streams[].bits_per_second' | awk 'BEGIN{s=0;}{s+=$1;}END{printf "%3.0f\n", s/NR/10^6}');
-    if [[ ("${wifibw}") && ("${wifibw}"  -lt 150) ]]; then
+    if [[ ("${wifibw}") && ("${wifibw}"  -lt ${o_ip_limit}) ]]; then
 	say "Low wi-fi bandwidth of ${wifibw} detected on $(hostname)"
 	clog "${wifibw} Mbps from iperf (immediately prior was ${lastwf})"
+	echo "${wifibw} Mbps from iperf (immediately prior was ${lastwf})"
+	ipinfo -n
     else
 	echo "iperf3 bandwidth ${wifibw} Mbps"
 	lastwf=${wifibw}

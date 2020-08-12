@@ -7,8 +7,9 @@
 ###############################################################################
 
 o_client="papamini.local"
-o_st_limit=80
-o_ip_limit=150
+[[ ! ${1} ]] && o_st_limit=80  || o_st_limit=${1}
+[[ ! ${2} ]] && o_ip_limit=150 || o_ip_limit=${2}
+[[ ! ${3} ]] && o_sleep=60     || o_sleep=${3}
 
 function cbasename() { echo $(/usr/bin/basename $(echo "${*}" | sed 's/^-//')); }
 function clog() {
@@ -17,25 +18,27 @@ function clog() {
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
 }
 
+echo "Using ${o_st_limit} for speedtest bandwidth limit"
+echo "Using ${o_ip_limit} for iperf3 bandwidth limit"
+echo "Using ${o_sleep} as the sleep interval"
 while true; do
     bw=$(( $(speedtest --no-upload --json | jq '.download' | cut -f1 -d'.') / 1000000 ))
     if [[ ${bw} -lt 80 ]]; then
 	say "Low bandwidth of $bw} mega bits per second detected on $(hostname)"
 	clog "${bw} Mbps from speedtest (immediately prior was ${last})"
     else
-	sleep 60
+	echo "Speetest bandwidth ${bw} Mbps"
+	last=${bw}
     fi
-    last=${bw}
-done &
 
-while true; do
     wifibw=$(iperf3 -c papamini.local -J | jq '.intervals[].streams[].bits_per_second' | awk 'BEGIN{s=0;}{s+=$1;}END{printf "%3.0f\n", s/NR/10^6}');
     if [[ ${wifibw} -lt 150 ]]; then
 	say "Low wi-fi bandwidth of ${wifibw} detected on $(hostname)"
 	clog "${wifibw} Mbps from iperf (immediately prior was ${lastwf})"
-    else 
-	sleep 60
+    else
+	echo "iperf3 bandwidth ${wifibw} Mbps"
+	lastwf=${wifibw}
     fi
-    lastwf=${wifibw}
-done &
+    sleep ${o_sleep}
+done
 

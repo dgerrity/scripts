@@ -62,7 +62,7 @@ function fixmac() {
 function osxDeviceFromInterface() {
 #   osxDeviceFromInterface( en0 ); converts unix interface name to osx Device name
 #   Also formats name if it is longer than 8 characters
-    ab=$(networksetup -listnetworkserviceorder | sed -n "/Dev.*${1}/s/.*t: \(.*\),.*/\1/p")
+    ab=$(networksetup -listnetworkserviceorder | sed -n "/Device: ${1}/s/.*t: \(.*\),.*/\1/p")
     [[ (! ${ab}) && (${i:0:4} == "utun") ]] && ab=vpn
     [[ ${#ab} -gt 8 ]] && ab=$(echo ${ab} | sed -e 's/ /-/g' -e 's/\(.......\).*\(...\)$/\1-\2/')
     echo "${ab}"

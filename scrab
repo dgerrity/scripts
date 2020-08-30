@@ -408,11 +408,11 @@ function mainprog() {
     fi
     showResults
     trap "cleanup" EXIT INT
-    [[ -e "${lock}" ]] && echo "Waiting on lock"
-    lockfile -r 2 "${lock}"
+#    [[ -e "${lock}" ]] && echo "Waiting on lock"
+#    lockfile -r 2 "${lock}"
     cat "${combined}" | sort | uniq > "${tmp1}" && mv "${tmp1}" "${HOME}/.scrabresults"
     export wordsfound=$(wc -l "${HOME}/.scrabresults" | awk '{print $1}')
-    rm -f ${lock}
+#    rm -f ${lock}
 }
 
 ###############################################################################

@@ -368,6 +368,7 @@ function evermd() {
 function interview() {
     pushd . &> /dev/null
     cd "${HOME}/Oracle/Oracle Content/Secure/Team/Interviews"
+    open .
     echo "Directory pushed, available with popd"
     if [[ ${1} ]]; then
 	fn="$(echo "${1,,} ${2,,}" | tr ' ' '-').md"
@@ -375,9 +376,10 @@ function interview() {
 	if [[ ! -f "${fn}" ]]; then
 	    printf "# ${1} ${2}\n\n" > "${fn}"
 	    str="> I am [not] inclined to hire ${1} for the position of {} based on this one-hour, "
-	    str+="in-person interview conducted on $(date "+%Y-%m-%d").  I was assigned the competencies "
+	    str+="zoom-based interview conducted on $(date "+%Y-%m-%d").  I was assigned the competencies "
 	    str+="{}."
-	    printf "${str}  ---" >> "${fn}"
+	    printf "${str} \n\n ---" >> "${fn}"
+	    [[ -f _template.md ]] && cat _template.md >> "${fn}"
 	else
 	    echo "${fn} already exists."
 	fi
@@ -523,7 +525,7 @@ function zoom() {
     open "${!zoomvar^^}"
 }
 
-function zoomcopy() { echo ${zoom_me^^} | pbcopy; echo "copied to clipboard - use zn -w me to start"; }
+function zoomcopy() { echo ${ZOOM_ME} | pbcopy; echo "copied to clipboard - use zn -w me to start"; }
 
 function forcesso() {
     open https://oradocs-corp.sites.us2.oraclecloud.com/authsite/home/
@@ -994,6 +996,7 @@ for i in ${localhosts};  do eval export ${i}=\"${i}.local\"; done
 [[ "${ip:0:9}" == "192.168.0" ]] && for i in ${homehosts}; do eval export ${i}=\"${i}.local\"; done
 
 [[ -r ~/Dropbox/Library/share/dict/altscrab ]] && export DEFAULT_DICT=~/Dropbox/Library/share/dict/altscrab
+[[ -r ~/Library/altscrab ]] && export DEFAULT_DICT=~/Library/altscrab
 
 # Old cmd.exe and old qnx habits
 alias cd..="cd .."

@@ -1,4 +1,4 @@
-#!/opt/local/bin/bash
+#!/usr/bin/env bash
 
 ###############################################################################
 # Hang - a script to guide guessing letters on partial words

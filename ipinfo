@@ -62,8 +62,9 @@ function fixmac() {
 function osxDeviceFromInterface() {
 #   osxDeviceFromInterface( en0 ); converts unix interface name to osx Device name
 #   Also formats name if it is longer than 8 characters
+    decho "osxDeviceFromInterface(${1})"
     ab=$(networksetup -listnetworkserviceorder | sed -n "/Device: ${1}/s/.*t: \(.*\),.*/\1/p")
-    [[ (! ${ab}) && (${i:0:4} == "utun") ]] && ab=vpn
+    [[ (! ${ab}) && ("${1:0:4}" == "utun") ]] && ab=vpn
     [[ ${#ab} -gt 8 ]] && ab=$(echo ${ab} | sed -e 's/ /-/g' -e 's/\(.......\).*\(...\)$/\1-\2/')
     echo "${ab}"
 }
@@ -87,7 +88,7 @@ function showServer() {
     [[ ! ${ip} ]] && ip=${1}
     local gw=$(echo ${ri} | grep gateway | sed 's/.*gateway: \([.[:digit:]]*\).*/\1/')
 #   If there is an ip address but no gateway, its a local area machine
-    [[ (! ${gw}) && ( ${ip}) ]] && gw="local" || gw=${gw:-invalid}
+    [[ (! ${gw}) && ${ip} ]] && gw="vpn" || gw=${gw:-invalid}
     decho $(date) figured out local or remote, calling nmap -n -Pn -p ${3} ${1}
     [[ ${3} ]] && po=$(nmap -n -Pn -p ${3} ${1} | grep tcp | sed 's/.*tcp \(.*\) .*/\1/')
     decho $(date) nmap done
@@ -97,10 +98,9 @@ function showServer() {
 function showInterfaces() {
 #   showInterfaces(); lists information about each interface that is up
     rc=1
-    for i in $(ifconfig -lu | grep -o "en.\|utun.."); do
+    for i in $(ifconfig -lu | grep -o "en.\|utun[0-9]\+"); do
 	decho "Checking interface ${i}"
         line="$(ifconfig -m ${i} | grep "inet ")"
-	line6="$(ifconfig -m ${i} | grep "inet6 fe80" | awk '{print $2}' | sed 's/%.*$//')"
 	[[ ! ${line} ]] && continue
 
 	rc=0
@@ -108,12 +108,10 @@ function showInterfaces() {
         [[ "${o_markdown}" ]] && \
 	    ip="**$(echo ${line} | awk '{print $2}')**/${mask}" || \
 	    ip="$(echo ${line} | awk '{print $2}')/${mask}"
-        gw="$(netstat  -nrf inet  | grep -m1 "^.*UGS.*${i}.*$" | awk '{print $2}')"
-	gw6="$(netstat -nrf inet6 | grep -m1 "^.*UGc.*${i}.*$" | awk '{print $2}' | sed 's/%.*$//')"
+        gw="$(netstat  -nrf inet  | grep -m1 "^.*U[GC]S.*${i}.*$" | awk '{print $2}')"
 	ab="$(osxDeviceFromInterface ${i})"
         if [[ ${ab} ]]; then
 	    printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${ip} ${gw} ${i}
-	    [[ ${line6} ]] && printl "$(echo ${ab} | tr [A-Z] [a-z]):" ${line6} ${gw6} ${i}
 	fi
     done
     return ${rc}
@@ -230,7 +228,8 @@ function mainprog() {
     showServer imap.gmail.com "gmail" 993
     showServer smtp.gmail.com "mts/smtp" 587
     [[ ${SMTP_SERVER} ]] && showServer "${SMTP_SERVER}" "mts/oci" 587
-    showServer rsync.macports.org "rsync" ${rsyncport}
+#   showServer rsync.macports.org "rsync" ${rsyncport}
+#   showServer zulu.local ".local" 22
 
 #   Check to see if the SOCKS proxy is active
     if [[ ${proxyport} ]]; then

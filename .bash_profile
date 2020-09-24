@@ -21,7 +21,6 @@
 
 [[ -s /Users/dan/.bashrc ]] && source /Users/dan/.bashrc || source ${HOME}/.bashrc
 bprev="$(echo '$Revision: 1.102 $' | sed -e 's/\$//g' -e 's/ $//')"
-platform=$(uname)
 
 ###############################################################################
 # Functions
@@ -33,14 +32,13 @@ function define()   { open "dict://$*";                                         
 function echored()  { tput setf 4; echo "$*";   tput op;                          }
 function editw()    { ${EDITOR} $(/usr/bin/which ${1});                           }
 function growlog()  { /Users/dan/bin/growl "$*"; clog "$*";                       }
-function locker()   { mv "${1}" "${HOME}/Dropbox/Documents/Locker/";              }
 function manpath()  { /usr/bin/manpath | tr ':' '\n';                             }
 function me()       { echo "${HOME}/.bash_profile";                               }
 function mute()     { osascript -e 'set volume with output muted';                }            
 function oracle()   { pushd ~/Oracle/Oracle\ Content/;                            }
 function path()     { echo $PATH | tr ':' '\n';                                   }
-function su()       { pwd -P > /tmp/.pushd; /usr/bin/su $@;                       }
-function sud()      { echo "${1}" > /tmp/.pushd; /usr/bin/su $@;                  }
+function su()       { pwd -P > /tmp/.pushd; /usr/bin/su "$@";                     }
+function sud()      { echo "${1}" > /tmp/.pushd; /usr/bin/su "$@";                }
 function unmute()   { osascript -e 'set volume withouttput muted';                }            
 function wcl()      { cat "${1}" | wc -l | awk '{print $1}';                      }
 function whoson()   { who; w; rwho; whos; last | grep -v ${USER};                 }
@@ -128,7 +126,7 @@ function use() {
     [[ ${#versions[@]} ]] || return 1      # No man page, displayed on stderr
     if [[ ${#versions[@]} -gt 1 ]]; then
 	echo "Warning: there are multiple versions of ${1}"
-	printf "%s\n" ${versions[@]}
+	printf "%s\n" "${versions[@]}"
     fi
     local p="${HOME}/.mancache/${1}.pdf"
     [[ (-s "${p}") && (-s ${versions}) && (${versions} -nt "${p}") ]] && rm -f "${p}"
@@ -295,10 +293,10 @@ function newmd() {
 
 function evernew() {
     [[ ! ${1} ]] && echo "Usage: evernew title" && return
-    title=$(echo ${@} | sed -e 's/ /_/g' -e 's/[^[:alpha:]_]*//g')
-    echo  "# ${*}" > "${HOME}/Dropbox/Documents/Locker/${title}.md"
-    open -a Marked "${HOME}/Dropbox/Documents/Locker/${title}.md"
-    edit "${HOME}/Dropbox/Documents/Locker/${title}.md"
+    title=$(echo "${@}" | sed -e 's/ /_/g' -e 's/[^[:alpha:]_]*//g')
+    echo  "# ${*}" > "${LOCKER}/${title}.md"
+    open -a "Marked 2" "${LOCKER}/${title}.md"
+    edit "${LOCKER}/${title}.md"
 }
 
 function everhtml() {
@@ -365,6 +363,28 @@ function evermd() {
 ###############################################################################
 # Interviewing
 
+function locker() {
+    pushd . &> /dev/null
+    echo "Directory pushed, available with popd"
+    if [[ "${1}" ]]; then
+	fn="${LOCKER}/${1}"
+	if [[ ! -f "${fn}" ]]; then
+	    if [[ -r "${1}" ]]; then
+		mv "${1}" "${fn}"
+	    else
+		touch "${fn}"
+		${EDIT} "${fn}"
+	    fi
+	else
+	    echo "${1} already exists in the locker."
+	fi
+    else
+	cd "${HOME}/Oracle/Oracle Content/Secure/Locker"
+	open .
+    fi
+}
+    
+
 function interview() {
     pushd . &> /dev/null
     cd "${HOME}/Oracle/Oracle Content/Secure/Team/Interviews"
@@ -392,11 +412,11 @@ function interview() {
 function lookup() { open "dict://$*"; }
 
 function quote() {
-    echo $(python -c "import urllib; print urllib.quote('''$@''')")
+    echo $(python -c "import urllib; print urllib.quote('''$*''')")
 }
 
 function unquote() {
-    echo $(python -c "import urllib; print urllib.unquote('''$@''')")
+    echo $(python -c "import urllib; print urllib.unquote('''$*''')")
 }
 
 function keyencode() {
@@ -473,7 +493,7 @@ function google() {
 
 function translate() {
     dlang="${1}"; shift
-    open "http://translate.google.com/#auto/${dlang}/$(echo -ne ${@} | xxd -plain | tr -d '\n' | sed 's/\(..\)/%\1/g')"
+    open "http://translate.google.com/#auto/${dlang}/$(echo -ne "${@}" | xxd -plain | tr -d '\n' | sed 's/\(..\)/%\1/g')"
 }
 
 function li() {
@@ -495,7 +515,7 @@ function lic() {
         zip="&searchLocationType=I&countryCode=us&postalCode=${1}&distance=100"
         shift
     fi
-    local co=$(echo $@ | tr ' ' '+')
+    local co=$(echo "$@" | tr ' ' '+')
     local url="http://www.linkedin.com/search/fpsearch?company="
     url="${url}${co}&currentCompany=C${zip}&page_num=1&search="
     url="${url}&pplSearchOrigin=MDYS&viewCriteria=2&sortCriteria=DR"
@@ -691,7 +711,7 @@ function _ok() {
 	fi
 	echo "${lockrev}"
 	echo "Current revision is ${curRev}"
-	echo $(tail "RCS/logs/${1}.log" | grep checked-out | tail -n 1 | sed "s#${HOME}#~#")
+	$(tail "RCS/logs/${1}.log" | grep checked-out | tail -n 1 | sed "s#${HOME}#~#")
 	if rcsdiff "${1}" &> /dev/null; then  echo "Files identical"; else  echo "Files differ"; fi
 	return 1
     fi
@@ -769,9 +789,9 @@ function dos2unix() {
 
 function unix2dos() {
     if [[ ! ${2} ]]; then
-	sed 's/$'"/`echo -e \\\r`/" "${1}" > ~/.tmp && mv ~/.tmp "${1}"
+	sed 's/$'"/$(echo -e \\\r)/" "${1}" > ~/.tmp && mv ~/.tmp "${1}"
     else
-	sed 's/$'"/`echo -e \\\r`/" "${1}" > "${2}"
+	sed 's/$'"/$(echo -e \\\r)/" "${1}" > "${2}"
     fi
 }
 
@@ -958,7 +978,7 @@ function edit() {
 # Code
 ###############################################################################
 
-logger -is "$(me) executed by $(ps -p $PPID -o args=), pid $$"
+logger -i "$(me) executed by $(ps -p $PPID -o args=), pid $$"
 fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcBrown=33; fgcRed=31; bgcGrey=47; bgcNone=49
 bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
@@ -986,7 +1006,8 @@ localhosts="${thishost} ${virtualhosts}"
 homehosts="moira zulu papamini arm"
 remotehosts="" #whiskey bfvana cottage garage hoopyfrood kkc kritzman"
 sshhosts="${virtualhosts} ${localhosts} ${homehosts} ${remotehosts}"
-[[ -e ~/.ssh/config ]] && sshhosts="${sshhosts} $(cat ~/.ssh/config | grep "\." | grep -v "*" | awk '{print $2}')"
+[[ -e ~/.ssh/config ]] && sshhosts="${sshhosts} $(cat ~/.ssh/config | grep "\." | grep -v "\*" | awk '{print $2}' | sort | uniq)"
+sshhosts="$(printf "%s\n" ${sshhosts} | grep -v "\." | sort | uniq)"
 dyndnshosts="${homehosts} ${remotehosts}"
 for i in ${dyndnshosts}; do eval export ${i}=\"${i}.dnsdojo.com\"; done
 for i in ${localhosts};  do eval export ${i}=\"${i}.local\"; done
@@ -997,6 +1018,10 @@ for i in ${localhosts};  do eval export ${i}=\"${i}.local\"; done
 
 [[ -r ~/Dropbox/Library/share/dict/altscrab ]] && export DEFAULT_DICT=~/Dropbox/Library/share/dict/altscrab
 [[ -r ~/Library/altscrab ]] && export DEFAULT_DICT=~/Library/altscrab
+
+[[ -r "${HOME}/Oracle/Oracle Content/Secure/Locker" ]] && \
+    export LOCKER="${HOME}/Oracle/Oracle Content/Secure/Locker"
+[[ -r ~/Dropbox/Documents/Locker ]] && export LOCKER=~/Dropbox/Documents/Locker
 
 # Old cmd.exe and old qnx habits
 alias cd..="cd .."
@@ -1061,7 +1086,7 @@ alias rcsversions="/bin/ls | sed 's/ /\\ /g' | xargs rlog | grep \"RCS\|head\" |
 alias rdiff="rcsdiff -wBy --left-column"
 alias rdiffc="rcsdiff -wBy --left-column --suppress-common-lines"
 alias roothere="su -m"
-alias reboot="clog "Restarting..."; sudo shutdown -r now"
+alias reboot='clog "Restarting..."; sudo shutdown -r now'
 alias renew="sudo ipconfig set ${aptdev} DHCP"
 alias scpm="/usr/bin/scp -Ep"
 alias sd="sudo /sbin/shutdown -s +5"
@@ -1106,35 +1131,31 @@ if [[ "${this_shell,,}" == "bash" ]]; then
     utils="dig dnstrace dnstracer ftp host iperf3 nc nmap nslookup ping scutil ssh traceroute wget"
     if [[ $(/usr/bin/which brew 2>/dev/null) ]]; then
 	bp=$(brew --prefix)
-	[[ -f ${bp}/etc/profile.d/bash_completion.sh ]] && source ${bp}/etc/profile.d/bash_completion.sh
-	[[ -f ${bp}/etc/bash_completion ]] && source ${bp}/etc/bash_completion
-    else
-	unset list; for i in ${dyndnshosts}; do list="${list} ${!i}"; done
-	complete -o default -W "${list}" ${utils} open
-	list="${sshhosts} imap.gmail.com smtp.gmail.com checkip.dyndns.com"
-	complete -o default -W "${list}" "${utils}"
-	unset list; for i in ${sshhosts}; do list="${list} ${!i}:\~/"; done
-	complete -o default -o nospace -W "${list}" scp
-	complete -o default -A alias "$(compgen -A alias)"
-	complete -o default -A function "$(compgen -A function)"
-	complete -d pushd
-	complete -u su usermod userdel passwd chage write chfn groups slay w
-	complete -g groupmod groupdel newgrp 2>/dev/null
-	complete -A stopped -P '%' bg
-	complete -j -P '%' fg jobs disown
-	complete -v readonly unset
-	complete -A setopt set
-	complete -A shopt shopt
-	complete -A helptopic help
-	complete -a unalias
-	complete -A binding bind
-	complete -c command type which
-	complete -b builtin
-	complete -W "$([[ -d ~/bin ]] && /bin/ls ~/bin)" editw
+	[[ -f "${bp}/etc/profile.d/bash_completion.sh" ]] && source "${bp}/etc/profile.d/bash_completion.sh"
+	[[ -f "${bp}/etc/bash_completion" ]] && source "${bp}/etc/bash_completion"
     fi
-	
-[[ -e "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"
-
-[[ -e "/usr/local/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/usr/local/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"
-
+    unset list; for i in ${dyndnshosts}; do list="${list} ${!i}"; done
+    complete -o default -W "${list}" ${utils} open
+    list="${sshhosts} imap.gmail.com smtp.gmail.com checkip.dyndns.com"
+    complete -o default -W "${list}" "${utils}"
+    unset list; for i in ${sshhosts}; do list="${list} ${!i}:\~/"; done
+    complete -o default -o nospace -W "${list}" scp
+    complete -o default -A alias "$(compgen -A alias)"
+    complete -o default -A function "$(compgen -A function)"
+    complete -d pushd
+    complete -u su usermod userdel passwd chage write chfn groups slay w
+    complete -g groupmod groupdel newgrp 2>/dev/null
+    complete -A stopped -P '%' bg
+    complete -j -P '%' fg jobs disown
+    complete -v readonly unset
+    complete -A setopt set
+    complete -A shopt shopt
+    complete -A helptopic help
+    complete -a unalias
+    complete -A binding bind
+    complete -c command type which
+    complete -b builtin
+    complete -W "$([[ -d ~/bin ]] && /bin/ls ~/bin)" editw
+    [[ -e "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && \
+	source "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"
 fi

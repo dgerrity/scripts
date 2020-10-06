@@ -396,7 +396,7 @@ function mainprog() {
     initFiles
     if [[ ${o_blank} ]]; then
 	origrack=${rack}
-	for L in a b c d e f g h i j k l m n o p q r s t u v w x y z; do
+	for L in {a..z}; do
 	    for dict in ${o_dict}; do 
 		echo -en "${L} ";  rack="${origrack}${L}"; 
 		processRack

@@ -90,7 +90,8 @@ function showServer() {
 #   If there is an ip address but no gateway, its a local area machine
     [[ (! ${gw}) && ${ip} ]] && gw="vpn" || gw=${gw:-invalid}
     decho $(date) figured out local or remote, calling nmap -n -Pn -p ${3} ${1}
-    [[ ${3} ]] && po=$(nmap -n -Pn -p ${3} ${1} | grep tcp | sed 's/.*tcp \(.*\) .*/\1/')
+    [[ ${3} ]] && \
+	po=$(nmap -n -Pn -p ${3} ${1} 2>/dev/null | grep tcp | sed 's/.*tcp \(.*\) .*/\1/')
     decho $(date) nmap done
     printl ${2}: ${ip} ${gw} ${po} ${3}
 }
@@ -152,6 +153,7 @@ function showSSID() {
     [[ "$(which airport)" ]] && ssid="$(airport -I | grep " SSID:" | sed 's/.*SSID: //')" || return 1
     [[ "$(airport -I)" == "AirPort: Off" ]] && ssid="${aptname}-is-off"
     [[ ! "${ssid}" ]] && ssid="disconnected"
+    [[ ! ("${ssid}" == "ELPP") ]] && ssid='\033[31;1m'"${ssid}"'\033[0m'
     [[ "${o_markdown}" ]] && \
 	str=$(printf "| %-12s | %-17s | | |" "ssid:" "${ssid}") || \
 	str=$(printf "%-12s %s" "ssid:" "${ssid}")

@@ -6,13 +6,18 @@
 ###############################################################################
 
 source ~/.bash_profile
+echo "Starting by looking at SSID and running ipinfo..."
 clog "Initiating, SSID is $(airport -I | grep " SSID:" | awk '{print $2}')"
 ipinfo
+echo "Logging bandwidth..."
 clog $(bandwidth papamini.local)
-sudo ifconfig en0 down
+echo "Taking en0 down, sleeping then up again..."
+sudo ifconfig "${aptdev:-en0}" down
 sleep 3
-sudo ifconfig en0 up
+sudo ifconfig "${aptdev:-en0}" up
 sleep 1
 ipinfo
-clog $(bandiwidth papamini.local)
+echo "Running bandwidth again..."
+clog $(bandwidth papamini.local)
 bandwidth papamini.local
+

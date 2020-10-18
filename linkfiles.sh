@@ -54,6 +54,7 @@ linkfile join-next-zoom
 linkfile proxy
 linkfile scrab
 linkfile timedns
+linkfile today
 linkfile vol
 linkfile watchnet
 

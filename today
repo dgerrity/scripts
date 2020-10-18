@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+###############################################################################
+#
+# today - closes and reopens network connections, measuring bandwidth
+#
+###############################################################################
+
+source ~/.bash_profile
+clog "Initiating, SSID is $(airport -I | grep " SSID:" | awk '{print $2}')"
+ipinfo
+clog $(bandwidth papamini.local)
+sudo ifconfig en0 down
+sleep 3
+sudo ifconfig en0 up
+sleep 1
+ipinfo
+clog $(bandiwidth papamini.local)
+bandwidth papamini.local

@@ -373,7 +373,8 @@ function locker() {
 		mv "${1}" "${fn}"
 	    else
 		touch "${fn}"
-		${EDIT} "${fn}"
+		${EDITOR} "${fn}" &
+		osascript -e 'tell app "Emacs" to activate'
 	    fi
 	else
 	    echo "${1} already exists in the locker."
@@ -398,7 +399,7 @@ function interview() {
 	    str="> I am [not] inclined to hire ${1} for the position of {} based on this one-hour, "
 	    str+="zoom-based interview conducted on $(date "+%Y-%m-%d").  I was assigned the competencies "
 	    str+="{}."
-	    printf "${str} \n\n ---" >> "${fn}"
+	    printf "${str} \n\n ---\n\n" >> "${fn}"
 	    [[ -f _template.md ]] && cat _template.md >> "${fn}"
 	else
 	    echo "${fn} already exists."

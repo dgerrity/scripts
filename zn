@@ -26,12 +26,12 @@ function enter() {
     echo
 }
 
-function vecho()   { [[ ${o_verbose} ]] && echo "$@";              }
-function vechonr() { [[ ${o_verbose} ]] && echo -en "$@";          }
-function decho()   { [[ ${o_debug}   ]] && echo "$@";              }
-function don()     { [[ ${o_debug}   ]] && set -x;                 }
-function doff()    { [[ ${o_debug}   ]] && set +x;                 }
-function dopen()   { [[ ${o_debug}   ]] && echo "$@" || open "$@"; }
+function vecho()   { [[ ${o_verbose} ]] && echo "$@";                }
+function vechonr() { [[ ${o_verbose} ]] && echo -en "$@";            }
+function decho()   { [[ ${o_debug}   ]] && echo "$@";                }
+function don()     { [[ ${o_debug}   ]] && set -x;                   }
+function doff()    { [[ ${o_debug}   ]] && set +x;                   }
+function dopen()   { [[ ${o_debug}   ]] && echo "|$@|" || open "$@"; }
 
 function usage() {
 #   Displays usage information
@@ -71,8 +71,8 @@ function zoomical() {
     	    topic[++i]=$(echo "${line}" | sed 's/^%%%\(.*$\)/\1/')
     	    vecho "Topic: |${topic[i]}|"
     	elif [[ ! ${url[i]} && $(echo "${line}" | grep "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*") ]]; then
-    	    decho "Extracting URL from ${line}"
-    	    url[i]=$(echo "${line}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*")
+    	    decho "Extracting URL from |d${line}|"
+    	    url[i]="$(echo "${line}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*" | sed 's/[[:blank:]]//g')"
     	    vecho "URL: |${url[i]}|"
     	elif [[ ! ${block[i]} && $(echo "${line}" | grep "[0-9]\{1,2\}:[0-9]\{2\} [AP]M - [0-9]\{1,2\}") ]]; then
     	    decho "Looking for time in ${line}"

@@ -6,11 +6,16 @@
 #
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
+# Change history:
+# 1.1 Improved debugging strings, looked for unusual URLs containing, i.e.,
+#     &nbsp and the double quote character ".  These strings sometimes appear
+#     in calendar entries.
+# 1.0 initial release
 ###############################################################################
 
 base_url="${ZOOM_DOMAIN:-zoom.us}"
 me=$(basename "$0")
-version="1.0"
+version="1.1"
 
 ###############################################################################
 # Functions

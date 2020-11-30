@@ -384,22 +384,19 @@ function locker() {
 	open .
     fi
 }
-    
 
 function interview() {
     pushd . &> /dev/null
     cd "${HOME}/Oracle/Oracle Content/Secure/Team/Interviews"
-    open .
-    echo "Directory pushed, available with popd"
     if [[ ${1} ]]; then
 	fn="$(echo "${1,,} ${2,,}" | tr ' ' '-').md"
 	open "https://www.linkedin.com/search/results/index/?keywords=${1}+${2}&origin=GLOBAL_SEARCH_HEADER"
 	if [[ ! -f "${fn}" ]]; then
 	    printf "# ${1} ${2}\n\n" > "${fn}"
 	    str="> I am [not] inclined to hire ${1} for the position of {} based on this one-hour, "
-	    str+="zoom-based interview conducted on $(date "+%Y-%m-%d").  I was assigned the competencies "
-	    str+="{}."
+	    str+="zoom-based interview conducted on $(date "+%Y-%m-%d")."
 	    printf "${str} \n\n ---\n\n" >> "${fn}"
+	    echo "" >> "${fn}"
 	    [[ -f _template.md ]] && cat _template.md >> "${fn}"
 	else
 	    echo "${fn} already exists."
@@ -1136,7 +1133,7 @@ if [[ "${this_shell,,}" == "bash" ]]; then
 	[[ -f "${bp}/etc/bash_completion" ]] && source "${bp}/etc/bash_completion"
     fi
     unset list; for i in ${dyndnshosts}; do list="${list} ${!i}"; done
-    complete -o default -W "${list}" ${utils} open
+    complete -o default -W "${list}" "${utils}" open
     list="${sshhosts} imap.gmail.com smtp.gmail.com checkip.dyndns.com"
     complete -o default -W "${list}" "${utils}"
     unset list; for i in ${sshhosts}; do list="${list} ${!i}:\~/"; done

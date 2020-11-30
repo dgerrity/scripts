@@ -10,7 +10,7 @@ echo "Starting by looking at SSID and running ipinfo..."
 ssid="$(airport -I | grep " SSID:" | awk '{print $2}')"
 clog "Initiating, SSID is ${ssid}"
 ipinfo
-if [[ "${ssid}" != "ELPP" ]]; then
+if [[ "${ssid}" == "ELPP" ]]; then
     echo "Logging bandwidth..."
     clog $(bandwidth papamini.local)
 fi

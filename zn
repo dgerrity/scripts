@@ -6,11 +6,16 @@
 #
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
+# Change history:
+# 1.1 Improved debugging strings, looked for unusual URLs containing, i.e.,
+#     &nbsp and the double quote character ".  These strings sometimes appear
+#     in calendar entries.
+# 1.0 initial release
 ###############################################################################
 
 base_url="${ZOOM_DOMAIN:-zoom.us}"
 me=$(basename "$0")
-version="1.0"
+version="1.1"
 
 ###############################################################################
 # Functions
@@ -71,8 +76,8 @@ function zoomical() {
     	    topic[++i]=$(echo "${line}" | sed 's/^%%%\(.*$\)/\1/')
     	    vecho "Topic: |${topic[i]}|"
     	elif [[ ! ${url[i]} && $(echo "${line}" | grep "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*") ]]; then
-    	    decho "Extracting URL from |d${line}|"
-    	    url[i]="$(echo "${line}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/[jms][^ ]*" | sed 's/[[:blank:]]//g')"
+    	    decho "Extracting URL from |${line}|"
+    	    url[i]="$(echo "${line}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/[jms][^ \"]*" | sed 's/[[:blank:]]//g')"
     	    vecho "URL: |${url[i]}|"
     	elif [[ ! ${block[i]} && $(echo "${line}" | grep "[0-9]\{1,2\}:[0-9]\{2\} [AP]M - [0-9]\{1,2\}") ]]; then
     	    decho "Looking for time in ${line}"
@@ -135,7 +140,7 @@ function mainprog() {
     	exit 2
     fi
 
-    [[ ${o_debug} ]] && for i in base_url o_debug o_include o_minutes o_prompt o_verbose o_with; do
+    [[ ${o_debug} ]] && for i in base_url o_debug o_include o_minutes o_prompt o_verbose o_with BASH_VERSION SHELL; do
     	echo -n "${i}=\"${!i}\" "
     done
     decho

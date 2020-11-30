@@ -846,7 +846,7 @@ function localid() {
 }
 
 function bandwidth() {
-    [[ ! -z "${1}" ]] && server="${1}" || server=iperf.he.net
+    [[ ! -z "${1}" ]] && server="${1}" || server=papamini.local
     iface="$(route get ${server} | grep interface | awk '{print $2}')"
     bmac="$(fixmac "$(ifconfig -m ${iface} | grep "ether " | awk '{print $2}')")"
     bmacname="$(grep ${bmac} ~/.knownmacaddresses | sed 's/^[0-9a-f:]* //')"

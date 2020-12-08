@@ -121,14 +121,14 @@ function mainProg() {
 
 o_debug=
 o_talk=
-o_growl=true
+o_growl=
 
 wakeCalled=$(date "+%Y-%m-%dT%H:%M:%S")
-logger -is "Waking"
+logger -i "Waking"
 
 [[ ${1} == "-d" ]] && o_debug=t
 
-[[ -r "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc" || logger -is "No .bashrc"
+[[ -r "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc" || logger -i "No .bashrc"
 
 o_iplog="${logdir}/com.centvc.ipinfo.log"
 

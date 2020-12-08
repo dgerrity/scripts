@@ -1098,6 +1098,7 @@ alias which="\type -a"
 # Mac stuff
 function define() { open "dict://${1}"; }
 alias cisco='open -a "Cisco AnyConnect Secure Mobility Client"'
+alias cycle="sudo ifconfig ${aptdev} down; sleep 2; sudoifconfig ${aptdev} up"
 alias devcenter="open https://developer.apple.com/devcenter/mac/index.action#"
 alias dirhide="sudo chflags -h hidden"
 alias dirshow="sudo chflags -h nohidden"

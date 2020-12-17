@@ -117,8 +117,8 @@ function zoomical() {
     else
         # More than one entry found
 	vecho "More than one entry found, processing"
-	for (( i=1; i<=n; i++ )); do
-	    echo "${i} Join ${topic[i]}; ${block[i]}"
+	for (( i=0; i<n; i++ )); do
+	    echo "$(( i+1 )) Join ${topic[i]}; ${block[i]}"
 	done	
 	read -rp "Join which meeting? [cancel] " response
 	[[ (! "${response}") || ("${response,,}" == "cancel") ]] && return 1

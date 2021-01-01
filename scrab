@@ -3,7 +3,7 @@
 # Words With Friends helper - find words in scrabble / Words With Friends
 #
 # To use, specify the letters in your rack as the first argument or using
-# the -l option.  You can also specify a prefix, a suffix, "use both," as a
+# the -r option.  You can also specify a prefix, a suffix, "use both," as a
 # prefix or a suffix, a length, a regex to meet, a required letter, "extra"
 # letters, and multiple dictionaries to search.
 # 

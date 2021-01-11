@@ -843,16 +843,16 @@ function localid() {
 }
 
 function bandwidth() {
+    local server
     [[ ! -z "${1}" ]] && server="${1}" || server=papamini.local
     iface="$(route get ${server} | grep interface | awk '{print $2}')"
     bmac="$(fixmac "$(ifconfig -m ${iface} | grep "ether " | awk '{print $2}')")"
     bmacname="$(grep ${bmac} ~/.knownmacaddresses | sed 's/^[0-9a-f:]* //')"
-
     osxs=$(networksetup -listnetworkserviceorder | sed -n "/Dev.*${iface}/s/.*t: \(.*\),.*/\1/p")
-    [[ (! ${osxs}) && (${i:0:4} == "utun") ]] && osxs=vpn
+    [[ (! ${osxs}) && (${iface:0:4} == "utun") ]] && osxs=vpn
     [[ ${#osxs} -gt 8 ]] && osxs=$(echo ${osxs} | sed -e 's/ /-/g' -e 's/\(.......\).*\(...\)$/\1-\2/')
 
-    echo "Testing..."
+    echo "Testing interface ${server} through ${iface} ${bmac} (${bmacname}) [${osxs}]..."
     bw=$(iperf3 -c "${server}" -J | \
 	jq '.intervals[].streams[].bits_per_second' | \
 	awk 'BEGIN{s=0;s2=0;}{s+=$1;s2+=$1^2;}END{printf "%3.0f +-%.0f Mbps\n", s/NR/10^6, sqrt((s2-s^2/NR)/NR)/10^6;}')

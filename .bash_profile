@@ -381,7 +381,7 @@ function locker() {
 	fi
     else
 	cd "${HOME}/Oracle/Oracle Content/Secure/Locker"
-	open .
+#	open .
     fi
 }
 

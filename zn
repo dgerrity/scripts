@@ -7,6 +7,7 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.5 Regex fix for urldefense
 # 1.4 Bug fix for those using .../my/... and zoom URLs without a prefix
 # 1.3 Better supports other conferencing solutions and solves for urldefense URLs
 # 1.2 Now supports other URLs like WebEx, bluejeans, etc.
@@ -18,7 +19,7 @@
 
 base_url="${ZOOM_DOMAIN:-zoom.us}" # set to base URL for a zoom meeting
 me=$(basename "$0")
-version="1.4"
+version="1.5"
 
 ###############################################################################
 # Functions
@@ -46,7 +47,7 @@ function usage() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     echo "${me} version ${version}"; echo
     [[ "${1}" == "version" ]] && exit 1
-    echo "${me} joins the zoom URL for upcoming iCal (Mac calendar) entries using the domain ${base_url}"
+    echo "${me} joins the web conferencing URL for upcoming iCal (Mac calendar) entries using the domain ${base_url}"
     echo "Usage: ${me} [options]"
     echo "             --help"
     echo "Optons"
@@ -89,7 +90,11 @@ function zoomical() {
             vecho "Topic: |${topic[i]}|"
         elif [[ ! "${url[i]}" ]] && (validConferencingURL "${line}"); then
             decho "Extracting URL from |${line}|"
-            url[i]=$(echo "${line}" | egrep -o 'https?://[^ ]+' | sed 's|[[:blank:]]||g')
+	    if [[ $(echo "${line}" | grep urldefense) ]]; then
+		url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
+	    else
+		url[i]=$(echo "${line}" | egrep -o 'https?://[^ ]+' | sed 's|[[:blank:]]||g')
+	    fi
             vecho "URL: |${url[i]}|"
         elif [[ ! ${block[i]} && $(echo "${line}" | grep "[0-9]\{1,2\}:[0-9]\{2\} [AP]M - [0-9]\{1,2\}") ]]; then
             decho "Looking for time in ${line}"
@@ -102,7 +107,7 @@ function zoomical() {
     if [[ ${n} -eq 0 ]]; then
         # No matching events    
         vecho "No events at ${offsetMins}"
-        echo "No zoom meetings found."
+        echo "No web conference meetings found."
     elif [[ ${n} -eq 1 ]]; then
         # Only one entry found
         vecho "Single meeting: ${topic[0]}"
@@ -125,7 +130,7 @@ function zoomical() {
         [[ (! "${response}") || ("${response,,}" == "cancel") ]] && return 1
         [[ $(echo "${response}" | sed 's/[0-9]*//g') ]] && echo "Invalid response - skipping" && return 2
         [[ (${response} -gt ${n}) || (${response} -lt 1) ]] && echo "Invalid meeting number - skipping" && return 3
-        [[ ! ${url[ (( --response )) ]} ]] && echo "Not a valid zoom meeting - skipping" && return 4
+        [[ ! ${url[ (( --response )) ]} ]] && echo "Not a valid web conference meeting - skipping" && return 4
         echo "Joining ${topic[response]}..."
         dopen "${url[response]}"
     fi

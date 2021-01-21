@@ -7,6 +7,7 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.6 Now includes Exchange as a back end by default (instead of just CalDAV)
 # 1.5 Regex fix for urldefense
 # 1.4 Bug fix for those using .../my/... and zoom URLs without a prefix
 # 1.3 Better supports other conferencing solutions and solves for urldefense URLs
@@ -19,7 +20,7 @@
 
 base_url="${ZOOM_DOMAIN:-zoom.us}" # set to base URL for a zoom meeting
 me=$(basename "$0")
-version="1.5"
+version="1.6"
 
 ###############################################################################
 # Functions
@@ -80,10 +81,11 @@ function zoomical() {
     i=-1
     offset="${o_minutes:-+5}"
     offsetMins=$(date -v"${offset}M" "+%Y-%m-%d %H:%M:%S %z")
-    [[ ${o_include} ]] && includeType= || includeType="-ict CalDAV"
+    [[ ${o_include} ]] && includeType= || includeType="-ict CalDAV,Exchange"
     decho "(icalBuddy -ea ${includeType} -b "%%%" eventsFrom:"${offsetMins}" to:"${offsetMins}")"
     while read -r line; do
         [[ ! ${line} ]] && continue
+	line="$(echo "${line}" | sed 's/\r//g')"
         if [[ $(echo "${line}" | grep "%%%") ]]; then
             decho "New event found: ${line}"
             topic[++i]=$(echo "${line}" | sed 's/^%%%\(.*$\)/\1/')

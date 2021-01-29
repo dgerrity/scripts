@@ -22,6 +22,12 @@ base_url="${ZOOM_DOMAIN:-zoom.us}" # set to base URL for a zoom meeting
 me=$(basename "$0")
 version="1.6"
 
+# Define which types of calendars should be included by default.  Typical values would be CalDAV,Exchange
+# Can set in the environment as the all caps version, will override this setting.
+# Types are case insenstitive: birthday, caldav, exchange, imap, local, subscription, icloud (same as caldav)
+# Using -i overrides this setting and includes all calendar types
+default_include_types="${DEFAULT_INCLUDE_TYPS:-Exchange}"
+
 ###############################################################################
 # Functions
 ###############################################################################
@@ -68,7 +74,9 @@ function usage() {
 }
 
 function validConferencingURL() {
-# takes a line of text, returns true if that string contains a valid conferencing URL.  (Many URLs can be in a calendar entry).
+#   Takes a line of text, returns true (a simple return statement) if that string contains a valid conferencing URL.
+#   Unfortunately, calendar entries often include multiple URLs, including URLs for getting help or local phone numbers    
+#   These definitions are not foolproof and could use some help.
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/.\+/[^ \"]*") ]]   && return   # zoom
     [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?webex.com/[^ \"]*") ]]         && return   # webex
@@ -77,15 +85,13 @@ function validConferencingURL() {
 }
 
 function zoomical() {
+#   Sift through the calendar and find URLs for video conferences starting in the next five minutes
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     i=-1
-    offset="${o_minutes:-+5}"
-    offsetMins=$(date -v"${offset}M" "+%Y-%m-%d %H:%M:%S %z")
-    [[ ${o_include} ]] && includeType= || includeType="-ict CalDAV,Exchange"
     decho "(icalBuddy -ea ${includeType} -b "%%%" eventsFrom:"${offsetMins}" to:"${offsetMins}")"
-    while read -r line; do
-        [[ ! ${line} ]] && continue
-	line="$(echo "${line}" | sed 's/\r//g')"
+    while read -r line; do  # Reads lines from a dump of calendar entries
+        [[ ! ${line} ]] && continue # move on with a blank line
+	line="$(echo "${line}" | sed 's/\r//g')" # strip the windows newlines from Outlook
         if [[ $(echo "${line}" | grep "%%%") ]]; then
             decho "New event found: ${line}"
             topic[++i]=$(echo "${line}" | sed 's/^%%%\(.*$\)/\1/')
@@ -139,6 +145,7 @@ function zoomical() {
 }
 
 function zoomwith() {
+#   Picks a particular zoom out of the environment and joins it.  Zoom variables should be of form ZOOM_JOHN for -w john
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     local envar="ZOOM_${o_with^^}"
     [[ ! ${!envar} ]] && echo "Cannot zoom ${o_with} because ${envar} is not found in the environment." && exit 6
@@ -164,6 +171,10 @@ function mainprog() {
     done
     decho
     
+    offset="${o_minutes:-+5}"
+    offsetMins=$(date -v"${offset}M" "+%Y-%m-%d %H:%M:%S %z")
+    [[ ${o_include} ]] && includeType= || includeType="-ict ${default_include_types}"
+
     if [[ ${o_with} ]]; then
         zoomwith "$@"
     else
@@ -172,7 +183,7 @@ function mainprog() {
 }
 
 ##############################################################################
-# Options
+# Options - process command line options
 ##############################################################################
 
 unset o_debug o_include o_minutes o_prompt o_verbose o_with

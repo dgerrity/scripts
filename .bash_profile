@@ -27,7 +27,6 @@ bprev="$(echo '$Revision: 1.102 $' | sed -e 's/\$//g' -e 's/ $//')"
 
 ###############################################################################
 # Alias-type functions
-function 1pass()    { echo -n "openssl aes-256-cbc -a -e -salt" | pbcopy;         }
 function define()   { open "dict://$*";                                           }
 function echored()  { tput setf 4; echo "$*";   tput op;                          }
 function editw()    { ${EDITOR} $(/usr/bin/which ${1});                           }
@@ -255,6 +254,41 @@ function share_screen() {
     sleep 1
     open vnc://localhost:${ssport}
 }
+
+function 1pass() {
+    eval $(op signin)
+}
+
+function opget() {
+#   Options are [[vpn | sso] [[username | password]]].  Default is vpn password
+    eval $(op signin --session "${OP_SESSION_gerrity_benditt}") # prompts for password if invalid, otherwise updates env
+    opkey="${OP_VPN_KEY}"
+    [[ ! "${2}" ]] && field=password || field="${2}"
+    [[ "${1,}" == "sso" ]] && opkey="${OP_SSO_KEY}"
+    case "${field}" in
+	username) op get item "${opkey}" --fields username | pbcopy;;
+	password) op get item "${opkey}" --fields password | pbcopy;;
+	endpoint) op get item "${opkey}" | \
+			jq '.overview.URLs[] | select(.u | contains("twv")).u' | sed 's/\"//g' | sed 's/https://' | pbcopy;;
+	*) echo "Nothing to get";;
+    esac
+    echo "${field} copied to the clipboard."
+}
+
+function opgetvpn() {
+    [[ ! "${1}" ]] && target="qqabh3n7h5ehnjlrujj4fz5oq4" || target="$*"
+    eval $(op signin --session "${OP_SESSION_gerrity_benditt}") # prompts for password if invalid, otherwise updates env
+    op get item "${target}" | jq '.overview.URLs[] | select(.u | contains("twv")).u' | sed 's/\"//g' | pbcopy
+    echo "Copied to clipboard"
+}
+
+function opgetany() {
+    [[ ! "${1}" ]] && target="qqabh3n7h5ehnjlrujj4fz5oq4" || target="$*"
+    eval $(op signin --session "${OP_SESSION_gerrity_benditt}") # prompts for password if invalid, otherwise updates env
+    op get item "${target}" --fields password | pbcopy
+    echo "Copied to clipboard"
+}
+
 
 ###############################################################################
 # Evernote functions
@@ -1127,12 +1161,15 @@ alias switchprinter="lpoptions -d "
 
 this_shell="$(ps -p $$ -o command= | sed -e's/^[.-]//' -e 's/[ -].*//')"
 if [[ "${this_shell,,}" == "bash" ]]; then
-    utils="dig dnstrace dnstracer ftp host iperf3 nc nmap nslookup ping scutil ssh traceroute wget"
     if [[ $(/usr/bin/which brew 2>/dev/null) ]]; then
 	bp=$(brew --prefix)
 	[[ -f "${bp}/etc/profile.d/bash_completion.sh" ]] && source "${bp}/etc/profile.d/bash_completion.sh"
 	[[ -f "${bp}/etc/bash_completion" ]] && source "${bp}/etc/bash_completion"
     fi
+    if [[ $(/usr/bin/which op 2>/dev/null) ]]; then
+	source <(op completion bash)
+    fi
+    utils="dig dnstrace dnstracer ftp host iperf3 nc nmap nslookup ping scutil ssh traceroute wget"
     unset list; for i in ${dyndnshosts}; do list="${list} ${!i}"; done
     complete -o default -W "${list}" "${utils}" open
     list="${sshhosts} imap.gmail.com smtp.gmail.com checkip.dyndns.com"

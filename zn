@@ -92,10 +92,10 @@ function zoomical() {
     while read -r line; do  # Reads lines from a dump of calendar entries
         [[ ! ${line} ]] && continue # move on with a blank line
 	line="$(echo "${line}" | sed 's/\r//g')" # strip the windows newlines from Outlook
-        if [[ $(echo "${line}" | grep "%%%") ]]; then
-            decho "New event found: ${line}"
-            topic[++i]=$(echo "${line}" | sed 's/^%%%\(.*$\)/\1/')
-            vecho "Topic: |${topic[i]}|"
+        if [[ "${line}" =~ "%%%" ]]; then
+	    decho "New event found: ${line}"
+	    topic[++i]=$(echo "${line}" | sed 's/^%%%\(.*$\)/\1/')
+	    vecho "Topic: |${topic[i]}|"
         elif [[ ! "${url[i]}" ]] && (validConferencingURL "${line}"); then
             decho "Extracting URL from |${line}|"
 	    if [[ $(echo "${line}" | grep urldefense) ]]; then

@@ -7,6 +7,8 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.8 Fix to remove launching directly to personal zoom channels which require https
+# 1.7 Now launches zoom meetings through command line instead of URL
 # 1.6 Now includes Exchange as a back end by default (instead of just CalDAV)
 # 1.5 Regex fix for urldefense
 # 1.4 Bug fix for those using .../my/... and zoom URLs without a prefix
@@ -20,7 +22,7 @@
 
 base_url="${ZOOM_DOMAIN:-zoom.us}" # set to base URL for a zoom meeting
 me=$(basename "$0")
-version="1.6"
+version="1.8"
 
 # Define which types of calendars should be included by default.  Typical values would be CalDAV,Exchange
 # Can set in the environment as the all caps version, will override this setting.
@@ -47,7 +49,7 @@ function vechonr() { [[ ${o_verbose} ]] && echo -en "$@";            }
 function decho()   { [[ ${o_debug}   ]] && echo "$@";                }
 function don()     { [[ ${o_debug}   ]] && set -x;                   }
 function doff()    { [[ ${o_debug}   ]] && set +x;                   }
-function dopen()   { [[ ${o_debug}   ]] && echo "|$@|" || open "$@"; }
+function dopen()   { [[ ${o_debug}   ]] && echo "|$*|" || open $*;   }
 
 function usage() {
 #   Displays usage information
@@ -73,6 +75,17 @@ function usage() {
     exit 1
 }
 
+function launchmtg() {
+#   Takes a URI and launches the meeting, preferring to launch zoom directly if the URI is of the .../j/... form.
+#   Launching direct URIs of the form .../my/... is not supported, so it defaults to using the https: handler
+    if [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/j\+/[^ \"]*") ]]; then
+	zoommtg="$(echo "${1}" | sed 's/^https/zoommtg/;s|/j/|/join?action=join\&confno=|;s/?pwd=/\&pwd=/')"
+	dopen -a Zoom.us ${zoommtg}
+    else
+	dopen "${1}"
+    fi
+}    
+	
 function validConferencingURL() {
 #   Takes a line of text, returns true (a simple return statement) if that string contains a valid conferencing URL.
 #   Unfortunately, calendar entries often include multiple URLs, including URLs for getting help or local phone numbers    
@@ -124,7 +137,7 @@ function zoomical() {
         [[ ${o_prompt} ]] && read -rp "Join ${topic[0]}; ${block[0]}? [y] " response
         if [[ (! ${response}) || (${response,,} == "y") ]]; then
             echo "Joining ${topic[0]}..."
-            dopen "${url[0]}"
+            launchmtg "${url[0]}"
         else
             echo "Skipped"
         fi
@@ -140,7 +153,7 @@ function zoomical() {
         [[ (${response} -gt ${n}) || (${response} -lt 1) ]] && echo "Invalid meeting number - skipping" && return 3
         [[ ! ${url[ (( --response )) ]} ]] && echo "Not a valid web conference meeting - skipping" && return 4
         echo "Joining ${topic[response]}..."
-        dopen "${url[response]}"
+        launchmtg "${url[response]}"
     fi
 }
 
@@ -150,7 +163,7 @@ function zoomwith() {
     local envar="ZOOM_${o_with^^}"
     [[ ! ${!envar} ]] && echo "Cannot zoom ${o_with} because ${envar} is not found in the environment." && exit 6
     echo "Joining ${o_with}'s zoom..."
-    dopen "${!envar}"
+    launchmtg "${!envar}"
 }
 
 function mainprog() {

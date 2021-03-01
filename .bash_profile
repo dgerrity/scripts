@@ -45,6 +45,10 @@ function whoson()   { who; w; rwho; whos; last | grep -v ${USER};               
 ###############################################################################
 # Mac OS X functions
 
+function fatinfo() {
+    lipo -info "$(\which ${1})"
+}
+
 function portinfopy() { 
     set -o noglob
     port info "py27-*${1}*" | grep " \@"

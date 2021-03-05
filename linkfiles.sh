@@ -52,11 +52,13 @@ linkfile inline
 linkfile ipinfo
 linkfile join-next-zoom
 linkfile proxy
+linkfile ovpn
 linkfile scrab
 linkfile timedns
 linkfile today
 linkfile vol
 linkfile watchnet
+linkfile zn
 
 [[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && \
     symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport "${HOME}/bin/airport"

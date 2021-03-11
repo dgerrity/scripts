@@ -4,15 +4,27 @@
 # ovpn - a bash script to join the Oracle VPN using credentials stored in
 #        1Password
 #
+# version history:
+# 1.0 2021-03-06 Initial release
 #
 ###############################################################################
 
-o_key="${OP_VPN_KEY}"
-o_path="/opt/cisco/anyconnect/bin/vpn"
-o_search="twv"
+o_exec="/opt/cisco/anyconnect/bin/vpn"         # location of the vpn executable
+o_label="alternate"                            # label of desired endpoint
+o_config="${HOME}/.config/op"                  # path to 1Password config file
+o_method="${OCI_VPN_DEFAULT:-1Password}"       # default method
 
-me=$(basename "$0")
+###############################################################################
+# Constants
+###############################################################################
+
 version="1.0"
+me=$(basename "$0")
+_red_="\033[1;31m"
+_green_="\033[5;32m"
+_yellow_="\033[1;33m"
+_bold_="\033[1;39m"
+_reset_="\033[0m"
 
 ###############################################################################
 # Usage
@@ -21,24 +33,29 @@ version="1.0"
 function usage() {
 #   Displays usage information
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
-    echo "${me} version ${version}"; echo
+    echo -e "${me} version ${version}"; echo
     [[ "${1}" == "version" ]] && exit 1
-    echo "${me} establishes or disconnects from the VPN using secrets stored in 1Password."
-    echo "Usage: ${me} [options] cmd"
-    echo "             --help"
-    echo " "
-    echo "Commands: on | off | status"
-    echo " "
-    echo "Options"
-    echo "  -d           debug"
-    echo "  -h           this message"
-    echo "  -v           verbose"
-    echo "  -e [vpn.com] override the 1Password endpoint (default found in 1Password entry)"
-    echo "  -k [key]     1Password key for the entry containing the credentials (default \$OP_VPN_KEY)"
-    echo "  -p [/path/]  override the default path to cisco anyconnect vpn executable (default ${o_path})"
-    echo "  -r [search]  use the specified string to locate the correct endpoint e.g., \"my\" (default \"${o_search}\")"
-    echo "  -s [session] provide a 1Password login session id to use (instead of getting a new one)"
-    echo " "
+    echo -e "${me} establishes or disconnects from the VPN using secrets stored in 1Password or OCI Vault."
+    echo -e "Usage: ${me} [options] cmd"
+    echo -e " "
+    echo -e "Commands: ${_bold_}on | off | status${_reset_}"
+    echo -e " "
+    echo -e "Options"
+    echo -e "  -d           debug"
+    echo -e "  -h           this message"
+    echo -e "  -v           verbose"
+    echo -e "  -1           use 1Password as the source for the credentials"
+    echo -e "  -c [dir]     override the default locations for cli configuration files (if not found, resorts to std)"
+    echo -e "  -e [domain]  override the endpoint found in the list of 'websites'"
+    echo -e "  -k [key]     key to use to find the entry containing the credentials (default from environment)"
+    echo -e "  -l [label]   use the specified label to locate the correct endpoint in the entry's list of \'websites\'"
+    echo -e "               list of websites e.g., \"myaccess\" (default \"${o_label}\")"
+    echo -e "  -o           use OCI as the source for the credentials"
+    echo -e "  -p [pwd]     override the password"
+    echo -e "  -s [session] provide a 1Password login session id to use (default in environemnt or asks every time)"
+    echo -e "  -u [uname]   override the username"
+    echo -e "  -x [file]    override the default location of the cisco anyconnect vpn executable (default ${o_exec})"
+    echo -e " "
     exit "${1:=1}"
 }
 
@@ -46,95 +63,175 @@ function usage() {
 # Debugging routines
 ###############################################################################
 
-function vecho()   { [[ ${o_verbose} ]] && echo "$@";                }
-function decho()   { [[ ${o_debug}   ]] && echo "$@";                }
+function vecho()   { [[ ${o_verbose} ]] && echo -e "${_yellow_}$*${_reset_}"; }
+function decho()   { [[ ${o_debug}   ]] && echo -e "${_red_}$*${_reset_}";    }
 
 function enter() {
 #   Call at the entry of each function for debugging purposes: enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     [[ ! ${o_debug} ]] && return 0
-    ln=${2}; fn=${1}; shift; shift;
-    printf "Line %3s, %s" "${ln}" "${fn}"
-    [[ "$*" ]] && echo "( $* )"
+    fn=${1}; ln=${2}; shift; shift;
+    printf "${_green_}Line %3s, %s${_reset_}" "${ln}" "${fn}"
+    [[ -n "$*" ]] && echo -e "${_green_}( $* )${_reset_}" || echo " "ert
 }
 
 ###############################################################################
 # Functions
 ###############################################################################
 
+getCreds1Password() {
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    if [[ ! ${o_session} ]]; then
+	[[ ! -e "${o_config}/config" ]] && o_config="${HOME}/.config/op"
+	[[ ! -e "${o_config}/config" ]] && o_config="${HOME}/.op";
+	[[ ! -e "${o_config}/config" ]] && echo "No 1Password configuration found." && exit 10
+	suffix="$(jq -r '.accounts[0].shorthand' "${o_config}/config")"
+	decho "suffix is ${suffix}"
+	envar='OP_SESSION_'"${suffix}"
+	o_session="${!envar}" # if no session token is found or is invalid, the user will be prompted
+    fi
+    [[ ${o_session} ]] && vecho "Found session token using ${envar}"
+    decho "Using session token: ${o_session}"
+    if [[ ! "${o_key}" ]]; then
+	o_key="${OP_VPN_KEY}"
+	decho "Using key \"${o_key}\""
+	[[ ! ${o_key} ]] && echo "No key specified or available from the environment \${OP_VPN_KEY}" && exit 60
+    fi
+    eval "$(op signin --session "${o_session}")"
+    if ! op get item "${o_key}" &> /dev/null; then
+	echo "Invalid password or item \"${o_key}\" not found."
+	exit 30
+    fi
+    [[ ! ${o_username} ]] && o_username="$(op get item "${o_key}" --fields username)"
+    vecho "Got username ${o_username}"
+    [[ ! ${o_password} ]] && o_password="$(op get item "${o_key}" --fields password)"
+    decho "Got password ${o_password}"
+    [[ ! ${o_endpoint} ]] && o_endpoint="$(op get item "${o_key}" |\
+            jq '.overview.URLs[] | select(.l | contains("'"${o_label}"'")).u' |  sed 's/\"//g' | sed 's/https://')"
+    vecho "Got endpoint ${o_endpoint}"
+}
+
+getCredsOCI() {
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    if [[ ! "${o_key}" ]]; then
+	o_key="${OCI_VPN_KEY}"
+	decho "Using key \"${o_key}\" derived from the environment"
+	[[ ! ${o_key} ]] && echo "No key specified or available from the environment \${OCI_VPN_KEY}" && exit 60
+    fi
+    if json="$(oci secrets secret-bundle get --secret-id "${o_key}")"; then
+	json="$(echo "${json}" | jq -r '.data."secret-bundle-content".content' | base64 -d)"
+	[[ ! ${o_username} ]] && o_username="$(echo "${json}" | jq -r '.username')"
+	vecho "Got username ${o_username}"
+	[[ ! ${o_password} ]] && o_password="$(echo "${json}" | jq -r '.password')"
+	decho "Got password ${o_password}"
+	[[ ! ${o_endpoint} ]] && o_endpoint="$(echo "${json}" | \
+            jq -r '.endpoints[] | select(.l | contains("'"${o_label}"'")).u' | sed 's/https://')"
+	vecho "Got endpoint ${o_endpoint}"
+    else
+	echo "Retrieving credentials from OCI failed looking for ${o_key}"
+	exit 50
+    fi
+}
+
 joinvpn() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
-    decho "Signing in with ${o_session}"
-    if route -n get google.com | grep -q "interface: utun"; then
-	echo "vpn appears to be already connected."
-	exit 0
-    fi
-    if pgrep -i anyconnect; then
+    if pgrep "Cisco AnyConnect" &> /dev/null; then
 	echo "Warning - UI is running, attempting to quit."
 	osascript -e 'tell application "Cisco AnyConnect Secure Mobility Client" to quit' &> /dev/null
     fi
-    eval "$(op signin --session "${o_session}")"
-    if [[ ! ${o_session} ]]; then
-	acctname="$(op get account | jq -r '.name')"
-	decho "Got this account name ${acctname}"
-	acctname="$(echo "${acctname,,}" | sed 's/-/_/g')"
-	decho "converted it to this ${acctname}"
-	acctname="OP_SESSION_""${acctname}"
-	decho "Looking for ${acctname} in the environment"
-	o_session="${!acctname}"
-	decho "Found ${o_session} in the environment"
+    echo "Getting credentials"
+    case "${o_method}" in
+	1Password) getCreds1Password "$@";;
+	OCI)       getCredsOCI "$@";;
+    esac
+    echo "Connecting to ${o_endpoint} with username ${o_username}"
+    if [[ ${o_debug} || ${o_verbose} ]]; then
+	printf "%s\n%s\n" "${o_username}" "${o_password}" | ${o_exec} -s connect "${o_endpoint}" &> /dev/null
+    else
+	printf "%s\n%s\n" "${o_username}" "${o_password}" | ${o_exec} -s connect "${o_endpoint}"
     fi
-    username="$(op get item "${o_key}" --fields username)"
-    decho "Got username ${username}"
-    password="$(op get item "${o_key}" --fields password)"
-    decho "Got password ${password}"
-    [[ ! ${o_endpoint} ]] && \
-	ep="$(op get item "${o_key}" |\
-            jq '.overview.URLs[] | select(.u | contains("'"${o_search}"'")).u' |  sed 's/\"//g' | sed 's/https://')" || \
-	    ep=${o_endpoint}
-    decho "Got endpoint ${ep}"    
-    printf "%s\n%s\n" "${username}" "${password}" | ${o_path} -s connect "${ep}"
-    ${o_path} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
+    ${o_exec} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
 }
 
-main(){
+check_method() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
-    case "${1}" in
-	connect | on)
-	    joinvpn "$@";;
-	disconnect | off)
-	    decho "Signing off"
-	    ${o_path} -s disconnect;;
-	status | state)
-	    decho "Getting state"
-	    ${o_path} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q';;
-	 
-	*)  echo "Invalid command \"${1}\" provided"
-	    usage 2;;
+    case "${o_method}" in
+	1Password) if [[ ! "$(\which op)" ]]; then
+		       echo "Missing one password command-line interface (brew install 1password-cli)."
+		       exit 1
+		   fi;;
+        OCI)       if [[ ! "$(\which oci)" ]]; then
+                       echo "Missing oci command-line interface and 1Password not specified (brew install oci-cli)."
+		       exit 1
+		   fi;;
+	*)         echo "Unknown credential lookup method specified: \"${o_method}\""
+		   exit 1;;
     esac
 }
 
-function check_params() {
+check_exec() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
-    [[ ! "$(\which op)" ]] && echo "Missing one password command-line interface (brew install 1password-cli" && exit 1
-    [[ ! "$(\which "${o_path}")" ]] && echo "Missing vpn executable (${o_path})" && exit 2
+    [[ ! "$(\which "${o_exec}")" ]] && echo "Missing vpn executable: ${o_exec}" && exit 2
     if ! pgrep -i ".*vpn.*d" >/dev/null; then echo "Missing a running vpn daemon.  Is Cisco installed?"; exit 4; fi
+}
+
+main() {
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    [[ ${o_debug} ]] && for i in o_debug o_verbose o_config o_endpoint o_exec o_key o_method o_password o_username \
+					 o_label o_session o_username o_url BASH_VERSION SHELL; do
+	echo -n "${i}=\"${!i}\" "
+    done
+    decho
+
+    case "${1}" in
+	connect | on)
+	    if route -n get google.com | grep -q "interface: utun"; then
+		echo "VPN already connected."
+		${o_exec} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
+		exit 0
+	    fi
+	    check_method "$@"
+	    check_exec "$@"
+	    joinvpn "$@";;
+
+	disconnect | off)
+	    vecho "Signing off"
+	    check_exec "$@"
+	    ${o_exec} -s disconnect &> /dev/null
+	    main state;;
+
+	status | state)
+	    vecho "Getting state"
+	    check_exec "$@"
+	    ${o_exec} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
+	    if pgrep "Cisco AnyConnect" &> /dev/null; then echo "   app:   Running"; else echo "   app:   Not running"; fi;;
+
+	*)  [[ "${1}" ]] && echo "Invalid command \"${1}\" provided"
+	    usage 2;;
+    esac
 }
 
 ##############################################################################
 # Options - process command line options
 ##############################################################################
 
-unset o_debug o_endpoint o_session o_verbose
-while getopts ":dhve:k:p:r:s:" option; do
+# set o_config o_exec o_label o_method
+unset o_debug o_endpoint o_password o_session o_username o_verbose
+
+while getopts ":dhv1c:e:k:l:op:s:u:x:" option; do
     case ${option} in
         d) o_debug=true; o_verbose=true;;
         h) usage 0;;
         v) o_verbose=true;;
+	1) o_method="1Password";;
+	c) o_config=${OPTARG};;
         e) o_endpoint=${OPTARG};;
 	k) o_key=${OPTARG};;
-	p) o_path=${OPTARG};;
-	r) o_search=${OPTARG};;
+	l) o_label=${OPTARG};;
+	o) o_method="OCI";;
+	p) o_password=${OPTARG};;
 	s) o_session=${OPTARG};;
+	u) o_username=${OPTARG};;
+	x) o_exec=${OPTARG};;
         :) echo "Required argument to -${OPTARG} not specified."
            exit 1;;
         *) echo "Option not recognized."
@@ -142,10 +239,4 @@ while getopts ":dhve:k:p:r:s:" option; do
     esac
 done
 
-[[ ${o_debug} ]] && for i in o_debug o_verbose o_key o_path o_search o_session o_url BASH_VERSION SHELL; do
-    echo -n "${i}=\"${!i}\" "
-done
-decho
-
-check_params "$@"
 main "${!OPTIND}"

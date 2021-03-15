@@ -2,9 +2,10 @@
 ###############################################################################
 #
 # ovpn - a bash script to join the Oracle VPN using credentials stored in
-#        1Password
+#        an online vault (like 1Password or OCI Vault)
 #
 # version history:
+# 1.1 2021-03-12 Added Vault
 # 1.0 2021-03-06 Initial release
 #
 ###############################################################################
@@ -134,9 +135,16 @@ getCredsOCI() {
 
 joinvpn() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
-    if pgrep "Cisco AnyConnect" &> /dev/null; then
-	echo "Warning - UI is running, attempting to quit."
-	osascript -e 'tell application "Cisco AnyConnect Secure Mobility Client" to quit' &> /dev/null
+    if [[ "$(uname)" == "Linux" ]]; then
+	if pgrep "vpnui" &> /dev/null; then
+	   echo "Warning UI is running, attempting to quit"
+	   kill "$(pgrep "vpnui")"
+	fi
+    elif [[ "$(uname)" == "Darwin" ]]; then
+	if pgrep "Cisco AnyConnect" &> /dev/null; then
+	    echo "Warning - UI is running, attempting to quit."
+	    osascript -e 'tell application "Cisco AnyConnect Secure Mobility Client" to quit' &> /dev/null
+	fi
     fi
     echo "Getting credentials"
     case "${o_method}" in
@@ -145,9 +153,9 @@ joinvpn() {
     esac
     echo "Connecting to ${o_endpoint} with username ${o_username}"
     if [[ ${o_debug} || ${o_verbose} ]]; then
-	printf "%s\n%s\n" "${o_username}" "${o_password}" | ${o_exec} -s connect "${o_endpoint}" &> /dev/null
-    else
 	printf "%s\n%s\n" "${o_username}" "${o_password}" | ${o_exec} -s connect "${o_endpoint}"
+    else
+	printf "%s\n%s\n" "${o_username}" "${o_password}" | ${o_exec} -s connect "${o_endpoint}" &> /dev/null
     fi
     ${o_exec} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
 }
@@ -156,11 +164,11 @@ check_method() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     case "${o_method}" in
 	1Password) if [[ ! "$(\which op)" ]]; then
-		       echo "Missing one password command-line interface (brew install 1password-cli)."
+		       echo "Missing one password command-line interface."
 		       exit 1
 		   fi;;
         OCI)       if [[ ! "$(\which oci)" ]]; then
-                       echo "Missing oci command-line interface and 1Password not specified (brew install oci-cli)."
+                       echo "Missing oci command-line interface."
 		       exit 1
 		   fi;;
 	*)         echo "Unknown credential lookup method specified: \"${o_method}\""
@@ -184,7 +192,11 @@ main() {
 
     case "${1}" in
 	connect | on)
-	    if route -n get google.com | grep -q "interface: utun"; then
+	    if [[ "$(uname)" == "Darwin" ]] && route -n get google.com | grep -q "interface: utun"; then
+		echo "VPN already connected."
+		${o_exec} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
+		exit 0
+	    elif [[ "$(uname)" == "Linux" ]] && route -n | grep "^0.0.0.0*U " | grep -q "tun"; then
 		echo "VPN already connected."
 		${o_exec} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
 		exit 0

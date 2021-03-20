@@ -131,7 +131,7 @@ joinvpn() {
     fi
     decho "Getting credentials"
     case "${o_method}" in
-	OCI)       if ! getCredsOCI "$@"; then
+	OCI)       if ! OCIIsWorking "$@"; then
 		       echo "OCI CLI lookup problem; invalid oci setup or bad key provided.  Use -v for details."
 		       exit 100
 		   fi;;

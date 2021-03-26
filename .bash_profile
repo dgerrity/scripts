@@ -1020,9 +1020,8 @@ bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
     papamini)      fgc=${fgcBrown};;
     dgerrity-mac)  fgc=${fgcGrey};;
-    mike)          fgc=${fgcRed};;
+    risc)          fgc=${fgcRed};;
     moira)         fgc=${fgcBlue};;
-    arm)           fgc=${fgcBlue};;
      * )           fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3
@@ -1039,7 +1038,7 @@ fi
 thishost="$(hostname -s | sed 's/[- ]/_/g')"
 virtualhosts="" #oscar mike kilo zulu uniform
 localhosts="${thishost} ${virtualhosts}"
-homehosts="moira zulu papamini arm"
+homehosts="moira zulu papamini arm mint workmint"
 remotehosts="" #whiskey bfvana cottage garage hoopyfrood kkc kritzman"
 sshhosts="${virtualhosts} ${localhosts} ${homehosts} ${remotehosts}"
 [[ -e ~/.ssh/config ]] && sshhosts="${sshhosts} $(cat ~/.ssh/config | grep "\." | grep -v "\*" | awk '{print $2}' | sort | uniq)"

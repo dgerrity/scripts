@@ -7,6 +7,7 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.9 Fix to remove semicolons sometimes added by outlook
 # 1.8 Fix to remove launching directly to personal zoom channels which require https
 # 1.7 Now launches zoom meetings through command line instead of URL
 # 1.6 Now includes Exchange as a back end by default (instead of just CalDAV)
@@ -22,7 +23,7 @@
 
 base_url="${ZOOM_DOMAIN:-zoom.us}" # set to base URL for a zoom meeting
 me=$(basename "$0")
-version="1.8"
+version="1.9"
 
 # Define which types of calendars should be included by default.  Typical values would be CalDAV,Exchange
 # Can set in the environment as the all caps version, will override this setting.
@@ -114,7 +115,7 @@ function zoomical() {
 	    if [[ $(echo "${line}" | grep urldefense) ]]; then
 		url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
 	    else
-		url[i]=$(echo "${line}" | egrep -o 'https?://[^ ]+' | sed 's|[[:blank:]]||g')
+		url[i]=$(echo "${line}" | egrep -o 'https?://[^ ]+' | sed 's|[[:blank:]]||g;s|;||g')
 	    fi
             vecho "URL: |${url[i]}|"
         elif [[ ! ${block[i]} && $(echo "${line}" | grep "[0-9]\{1,2\}:[0-9]\{2\} [AP]M - [0-9]\{1,2\}") ]]; then

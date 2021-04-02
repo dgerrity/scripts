@@ -1,6 +1,6 @@
-!/usr/bin/env bash
+#!/usr/bin/env bash
 ################################################################################
-p#
+#
 # linkefiles.sh - sets up symlinks for the executables in this repo
 #
 ################################################################################
@@ -12,7 +12,7 @@ function symlink()
         echo "ln -s remote-path local-name";
         return 1;
     elif [[ -L "${2}" ]]; then
-        echo "Skipping echo $(\ls -l "${2}" | cut -c43-)"
+        echo "Skipping $(\ls -l "${2}" | cut -c43-): Target file exists and is a symlink."
         return 2;
     elif [[ -e "${2}" ]]; then
 	echo "Not linking: Target file ${2} exists and is not a symlink."

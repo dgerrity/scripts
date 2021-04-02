@@ -1020,7 +1020,7 @@ bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
     papamini)      fgc=${fgcBrown};;
     dgerrity-mac)  fgc=${fgcGrey};;
-    zulu)          fgc=${fgcRed};;
+    mike)          fgc=${fgcRed};;
     moira)         fgc=${fgcBlue};;
     arm)           fgc=${fgcBlue};;
      * )           fgc=${fgcBlack}; bgc=${bgcGrey};;

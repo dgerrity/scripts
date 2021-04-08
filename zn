@@ -95,6 +95,7 @@ function validConferencingURL() {
     [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/.\+/[^ \"]*") ]]   && return   # zoom
     [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?webex.com/[^ \"]*") ]]         && return   # webex
     [[ $(echo "${1}" | grep -o "https://bluejeans.com/[[:alnum:]]*/[[:alnum:]]*") ]]   && return   # bluejeans
+    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?doxy.me") ]]                   && return   # doxy me
     false
 }
 

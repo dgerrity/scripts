@@ -1020,9 +1020,9 @@ bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
 case $(hostname -s) in
     papamini)      fgc=${fgcBrown};;
     dgerrity-mac)  fgc=${fgcGrey};;
-    risc)          fgc=${fgcRed};;
-    moira)         fgc=${fgcBlue};;
-     * )           fgc=${fgcBlack}; bgc=${bgcGrey};;
+    risc)          fgc=${fgcBlue};;
+    rose)          fgc=${fgcRed};;
+    *)             fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3
 export PS1="\[\e]2;\u@\H - \j - \T\a\e[${bgc};${fgc}${bold}m\]\h:\w \\$\[\e[0m\] "

@@ -11,7 +11,7 @@
 ###############################################################################
 
 set -o noglob
-me="$(basename ${0})"
+me="$(basename "${0}")"
 
 ###############################################################################
 # Function definitions
@@ -23,22 +23,23 @@ function vecho() {
 
 function findkey() {
     if [[ ($EUID -eq 0) && ${o_user} ]]; then
-	while read fn; do
-	    fn=$(echo $fn | awk '{print $6}' | sed "s/[\':]//g")
+	while read -r fn; do
+	    fn=$(echo "${fn}" | awk '{print $6}' | sed "s/[\':]//g")
 	    kfiles="${kfiles}|${fn}"
-	done < <(su ${o_user} - -c "/usr/bin/defaults find ${1} | grep 'keys in domain'")
+	done < <(su "${o_user}" - -c /usr/bin/defaults find "${1}" | grep 'keys in domain')
     else
-	while read fn; do
-	    fn=$(echo $fn | awk '{print $6}' | sed "s/[\':]//g")
+	while read -r fn; do
+	    fn=$(echo "${fn}" | awk '{print $6}' | sed "s/[\':]//g")
 	    kfiles="${kfiles}|${fn}"
-	done < <(/usr/bin/defaults find ${1} 2> /dev/null | grep 'keys in domain')
+	done < <(/usr/bin/defaults find "${1}" 2> /dev/null | grep 'keys in domain')
     fi
 }
 
 function lookIn() {
-    while read fn; do 
-	[[ ! $(echo "${fn}" | grep "\.lockfile") ]] && pfiles="${pfiles}|${fn}"
-    done < <(${o_sudo} /usr/bin/find "${1}" -iname "*${2}*\.plist*" 2>/dev/null)
+    vecho "lookIn $*"
+    while read -r fn; do
+	if ! echo "${fn}" | grep -q "\.lockfile"; then pfiles="${pfiles}|${fn}"; fi
+    done < <(${o_sudo} /usr/bin/find "${1}" -iname "*${2}*.plist*" 2> /dev/null)
 }
 
 function look() {
@@ -61,7 +62,7 @@ function look() {
 	if [[ ${o_app_support} ]]; then
 	    vecho "Checking User Application Support..."
 	    lookIn "${HOME}/Library/Application Support" "${1}"            # U Library: App Sup
-	    for cdir in "${containers}"; do
+	    for cdir in ${containers}; do
 		[[ ! -d "${cpath}/${cdir}" ]] && continue
 		lookIn "${cpath}/${cdir}/Data/Application Support" "${1}"  # U Containers: App Sup
 	    done
@@ -79,7 +80,7 @@ function look() {
 	vecho "Checking Containers..."
 	containers="$(${o_sudo} /bin/ls -1A /var/root/Library/Containers/)"
 	cpath="/var/root/Library/Containers"
-	for cdir in "${containers}"; do
+	for cdir in ${containers}; do
 	    lookIn "${cpath}/${cdir}/Data/Library/Preferences" "${1}"      # root Con Prefs
 	    lookIn "${cpath}/${cdir}/Data/Library/LaunchAgents" "${1}"     # root Con LA
 	    lookIn "${cpath}/${cdir}/Data/Library/LaunchDaemons" "${1}"    # root Con LD
@@ -87,7 +88,7 @@ function look() {
 	if [[ ${o_app_support} ]]; then
 	    vecho "Checking System Application Support..."
 	    lookIn "${HOME}/Library/Application Support" "${1}"
-	    for cdir in "${containers}"; do
+	    for cdir in ${containers}; do
 		lookIn "${cpath}/${cdir}/Data/Application Support" "${1}"
 	    done
 	fi
@@ -116,7 +117,7 @@ function workPref() {
     [[ ! ${2} ]] && return
     [[ -w "${2}" ]] && o_sudo= || o_sudo=sudo
     ${o_sudo} plutil -convert xml1 "${2}"
-    ${o_sudo} ${o_action} "${2}"
+    ${o_sudo} "${o_action}" "${2}"
     ${o_sudo} plutil -convert binary1 "${2}"
 }
 
@@ -131,7 +132,7 @@ function keySearch() {
 	    [[ ${numFiles} -gt 6 ]] && \
 		echo -en "\n\nToo many files to recurse, be more specific\n" && return
 	    echo "Corresponding preference files:"
-	    echo "${kfiles}" | tr '|' "\n" | while read line; do
+	    echo "${kfiles}" | tr '|' "\n" | while read -r line; do
 		lookTight "${line}" | sed "s#${HOME}#~#"
 	    done
 	fi
@@ -144,18 +145,18 @@ function fileSearch() {
     look "${searchterm}"
     if [[ ${pfiles} ]]; then
 	pfiles="${pfiles:1}"
-	let i=1
+	i=1
 	OFS=${IFS}
 	IFS="|"
 	for f in ${pfiles}; do
 	    trim=$(echo "${f}" | sed -e "s#${HOME}#~#g" -e 's/Library/L/g' -e 's/Preferences/P/g' -e 's/Containers/C/g')
 	    [[ ${o_no_abbrev} ]] && trim="${f}"
 	    printf "%2s: %s \n" $(( i++ )) "${trim}"
-	    [[ ${o_ls} ]] && printf "    " && ${o_sudo} ls -Al ${f} | sed 's|/.*$||'
+	    [[ ${o_ls} ]] && printf "    " && ${o_sudo} ls -Al "${f}" | sed 's|/.*$||'
 	done
 	IFS=${OFS}
 	[[ ${o_action} ]] && \
-	    workPref ${o_action} "$(echo "${pfiles}" | cut -f "${o_which}" -d '|')"
+	    workPref "${o_action}" "$(echo "${pfiles}" | cut -f "${o_which}" -d '|')"
     else
 	echo "No preference files matching \"${searchterm}\" found."
     fi
@@ -227,7 +228,11 @@ function main() {
     vecho "${str}"
 
 #   Searching for either a key or a file
-    [[ ${o_key} ]] && keySearch || fileSearch
+    if [[ ${o_key} ]]; then
+	keySearch
+    else
+	fileSearch
+    fi
 }
 
 ###############################################################################
@@ -249,9 +254,9 @@ while getopts ":p:USabu:c:o:e:vk:lr" option; do
 	a) o_app_support=true;;
 	b) o_no_abbrev=true;;
 	u) o_user="${OPTARG}";;
-	c) o_action="$(/usr/bin/which cat)";              o_which=${OPTARG};;
-	o) o_action="$(/usr/bin/which open)";             o_which=${OPTARG};;
-	e) o_action="$(/usr/bin/which ${EDITOR:-emacs})"; o_which=${OPTARG};;
+	c) o_action="$(/usr/bin/which cat)";                o_which=${OPTARG};;
+	o) o_action="$(/usr/bin/which open)";               o_which=${OPTARG};;
+	e) o_action="$(/usr/bin/which "${EDITOR:-emacs}")"; o_which=${OPTARG};;
 	k) o_key=true;    searchterm=${OPTARG};;
 	l) o_ls=true;;
 	r) o_locate=true;;
@@ -261,7 +266,7 @@ while getopts ":p:USabu:c:o:e:vk:lr" option; do
     esac
 done
 
-[[ ${OPTIND} -eq ${#@} ]] && searchterm=${@:${OPTIND}}
+[[ ${OPTIND} -eq ${#@} ]] && searchterm=${*:${OPTIND}}
 
 
 main

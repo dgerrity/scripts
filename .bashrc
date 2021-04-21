@@ -31,8 +31,8 @@ function clog() {
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
 }
 
+[[ -d /opt/homebrew/bin ]] &&  [[ ! "${PATH}" =~ /opt/homebrew/bin ]] && PATH="/opt/homebrew/bin:${PATH}"
 [[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && PATH="${HOME}/bin:${PATH}"
-[[ -d /opt/homebrew/bin ]] &&  [[ ! "${PATH}" =~ /opt/homebrew/bin ]] && PATH="${PATH}:/opt/homebrew/bin"
 [[ -d /usr/local/sbin ]] && [[ ! "${PATH}" =~ /usr/local/sbin ]] && PATH="${PATH}:/usr/local/sbin"
 [[ -d /Applications/Postgres.app ]] && PATH="${PATH}:/Applications/Postgres.app/Contents/Versions/9.4/bin"
 export PATH

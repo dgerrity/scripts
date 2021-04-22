@@ -31,6 +31,7 @@ function clog() {
     echo "$(date "+%Y-%m-%d %H:%M:%S")${sp}$(cbasename $0) $@" >> "${lf}"
 }
 
+[[ -d /opt/homebrew/sbin ]] &&  [[ ! "${PATH}" =~ /opt/homebrew/sbin ]] && PATH="/opt/homebrew/sbin:${PATH}"
 [[ -d /opt/homebrew/bin ]] &&  [[ ! "${PATH}" =~ /opt/homebrew/bin ]] && PATH="/opt/homebrew/bin:${PATH}"
 [[ -d "${HOME}/bin" ]]   && [[ ! "${PATH}" =~ "${HOME}/bin" ]] && PATH="${HOME}/bin:${PATH}"
 [[ -d /usr/local/sbin ]] && [[ ! "${PATH}" =~ /usr/local/sbin ]] && PATH="${PATH}:/usr/local/sbin"

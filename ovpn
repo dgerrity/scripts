@@ -55,6 +55,13 @@ function usage() {
 # Debugging routines
 ###############################################################################
 
+# Text coloring
+_r_="\033[1;31m"
+_g_="\033[5;32m"
+_y_="\033[1;33m"
+_b_="\033[1;39m"
+_p_="\033[0m"
+
 me=$(basename "$0")
 function vecho()   { [[ ${o_verbose} ]] && echo -e "${_y_}$*${_p_}"; }
 function decho()   { [[ ${o_debug}   ]] && echo -e "${_r_}$*${_p_}";    }
@@ -234,7 +241,7 @@ main() {
             vecho "Getting state"
             check_exec "$@"
             ${o_exec} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
-            if pgrep "Cisco AnyConnect" &> /dev/null; then echo "  client: Running"; else echo "  client: Not running"; fi
+            if pgrep "Cisco AnyConnect" &> /dev/null; then echo "  client: Running"; fi
             echo "endpoint: $(dig +short -x "$("${o_exec}" stats | grep "Server Address" | awk '{print $3}')")";;
 
         *)  [[ "${1}" ]] && echo "Invalid command \"${1}\" provided"
@@ -245,13 +252,6 @@ main() {
 ##############################################################################
 # Options - process command line options
 ##############################################################################
-
-# Text coloring
-_r_="\033[1;31m"
-_g_="\033[5;32m"
-_y_="\033[1;33m"
-_b_="\033[1;39m"
-_p_="\033[0m"
 
 # set o_config o_exec o_label o_method
 unset o_debug o_endpoint o_password o_session o_username o_verbose o_instructions

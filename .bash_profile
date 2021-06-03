@@ -697,7 +697,7 @@ function find-python-lib() {
 }
 
 function sendcloud() {
-    swaks -s $SMTP_SERVER:587 -tls -au $SMTP_USERNAME -ap $SMTP_PASSWORD -f dgerrity-mac@gerrity.org $*
+    swaks -s "${SMTP_SERVER}:587" -tls -au "${SMTP_USERNAME}" -ap "${SMTP_PASSWORD}" -f  "dgerrity-mac@gerrity.org" "$@"
 }
 
 ###############################################################################

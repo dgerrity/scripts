@@ -208,9 +208,9 @@ function share_mouse() {
     if [[ ! "${gw}" ]]; then
 	port="10022"
 	target="$(dig papamini.dnsdojo.com +short)"
-	other="zulu.local"
+	other="risc.local"
     else
-	target="zulu.local"
+	target="risc.local"
 	other="$(dig papamini.dnsdojo.com +short)"
     fi
     already_running="$(ps axo pid,command | grep "".*[s]sh.*${target}"")"
@@ -535,9 +535,8 @@ function translate() {
 function li() {
 #   Lookup a name on LinkedIn and Facebook                                                          
     if [[ "${netloc}" == "Disconnected" ]]; then echo ${netloc}; return 1; fi
-    if [[ "${2}" == "" ]]; then echo "Usage: ${0} first last"; return 1; fi
-#   open "http://www.facebook.com/search/?q=${1}+${2}&init=quick"
-    open "http://www.linkedin.com/search/results/all/?keywords=${1} ${2}&origin=GLOBAL_SEARCH_HEADER"
+    if [[ ! "${2}" ]]; then echo "Usage: ${0} first last"; return 1; fi
+    open "https://www.linkedin.com/search/results/all/?keywords=${1}%20${2}&origin=GLOBAL_SEARCH_HEADER"
 }
 
 function lic() {
@@ -563,14 +562,17 @@ function aria() {
     if [[ "${netloc}" == "Disconnected" ]]; then echo ${netloc}; return 1; fi
     if [[ ${1} =~ \. || ${1} =~ \@ ]]; then
 	sstr="${1}"
+	stype="HOME"
     elif [[ ${2} ]]; then
 	sstr="${1}+${2}"
+	li "$@"
     elif [[ ${1} ]]; then
 	sstr="@${1}"
+	stype="PERSON"
     else
 	sstr=""
     fi
-    url="https://people.oracle.com/apex/f?p=8000:HOME::::::#${sstr}"
+    url="https://people.oracle.com/apex/f?p=8000:${stype}:4058490824176:::::#${sstr}"
     open "${url}"
 }
 
@@ -699,6 +701,16 @@ function sendcloud() {
     swaks -s $SMTP_SERVER:587 -tls -au $SMTP_USERNAME -ap $SMTP_PASSWORD -f dgerrity-mac@gerrity.org $*
 }
 
+function slack() {
+    if [[ "${netloc}" == "Disconnected" ]]; then echo ${netloc}; return 1; fi
+    if [[ ${1} =~ \. || ${1} =~ \@ ]]; then
+	userchannel="in channel \""${1}"\""
+	shift
+    fi
+    msg="$*"
+    str="osascript -e 'tell script \"Slack\" to send message \""${msg}"\" "${userchan}"'"
+    eval "${str}"
+}
 
 ###############################################################################
 # UNIX functions
@@ -1195,6 +1207,5 @@ if [[ "${this_shell,,}" == "bash" ]]; then
     complete -c command type which
     complete -b builtin
     complete -W "$([[ -d ~/bin ]] && /bin/ls ~/bin)" editw
-    [[ -e "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && \
-	source "/Users/dgerrity/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"
+    [[ -e "/usr/local/Cellar/oci-cli/2.25.0/libexec/lib/python3.9/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/usr/local/Cellar/oci-cli/2.25.0/libexec/lib/python3.9/site-packages/oci_cli/bin/oci_autocomplete.sh"
 fi

@@ -72,5 +72,7 @@ symlink "$(pwd)/applescript.el" "${HOME}/.emacs.d/add-ins/applescript.el"
 symlink "$(pwd)/editorconfig.el" "${HOME}/.emacs.d/add-ins/editorconfig.el"
 symlink "$(pwd)/markdown-mode.el" "${HOME}/.emacs.d/add-ins/markdown-mode.el"
 
+symlink "$(pwd)/karabiner.json" "${HOME}/.config/karabiner/karabiner.json"
+
 echo ">> Copy com.centvc.socat_listener.plist if desired into ${HOME}/Library/LaunchAgents"
 echo ">> Copy $(pwd)/com.centvc.iperf3.plist if desired into ${HOME}/Library/LaunchAgents"

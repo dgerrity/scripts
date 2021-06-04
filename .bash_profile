@@ -425,7 +425,7 @@ function locker() {
 
 function interview() {
     pushd . &> /dev/null
-    cd "${HOME}/Oracle/Oracle Content/Secure/Team/Interviews"
+    cd "${ORACLE_PREFIX}/Secure/Team/Interviews"
     if [[ ${1} ]]; then
 	fn="$(echo "${1,,} ${2,,}" | tr ' ' '-').md"
 	open "https://www.linkedin.com/search/results/index/?keywords=${1}+${2}&origin=GLOBAL_SEARCH_HEADER"
@@ -433,7 +433,7 @@ function interview() {
 	    printf "# ${1} ${2}\n\n" > "${fn}"
 	    str="> I am [not] inclined to hire ${1} for the position of {} based on this one-hour, "
 	    str+="zoom-based interview conducted on $(date "+%Y-%m-%d")."
-	    printf "${str} \n\n ---\n\n" >> "${fn}"
+	    printf "${str} \n\n---\n\n" >> "${fn}"
 	    echo "" >> "${fn}"
 	    [[ -f _template.md ]] && cat _template.md >> "${fn}"
 	else
@@ -683,14 +683,15 @@ function emissions() {
 	edit emissions.${format}
 }
 
-function browserupgrade() {
-    b=( "/Applications/Safari.app"
-        "/Applications/Google Chrome.app"
-        "/Applications/Firefox.app" )
-    for ((i=0; i<${#b[@]}; i++)); do
-	open -a "${b[i]}" "https://agilebits.com/browsers/index.html"
-	open -a "${b[i]}" "http://www.evernote.com/about/download/web_clipper.php"
-    done
+function browser_refresh() {
+    open -a "Google Chrome"  --args \
+	 'https://chrome.google.com/webstore/detail/1password-x-–-password-ma/aeblfdkhhhdcdjpifhhbdiojplfjncoa'
+    open -a "Firefox"        --args \
+	 'https://addons.mozilla.org/en-US/firefox/addon/1password-x-password-manager/?src=search'
+    open -a "Microsoft Edge" --args \
+	 'https://microsoftedge.microsoft.com/addons/detail/dppgmdbiimibapkepcbdbmkaabgiofem'
+    open -a "Brave Browser"  --args \
+	 'https://chrome.google.com/webstore/detail/1password-x-–-password-ma/aeblfdkhhhdcdjpifhhbdiojplfjncoa'
 }
 
 function find-python-lib() {
@@ -698,7 +699,7 @@ function find-python-lib() {
 }
 
 function sendcloud() {
-    swaks -s $SMTP_SERVER:587 -tls -au $SMTP_USERNAME -ap $SMTP_PASSWORD -f dgerrity-mac@gerrity.org $*
+    swaks -s "${SMTP_SERVER}:587" -tls -au "${SMTP_USERNAME}" -ap "${SMTP_PASSWORD}" -f  "dgerrity-mac@gerrity.org" "$@"
 }
 
 function slack() {
@@ -1066,8 +1067,13 @@ for i in ${localhosts};  do eval export ${i}=\"${i}.local\"; done
 [[ -r ~/Dropbox/Library/share/dict/altscrab ]] && export DEFAULT_DICT=~/Dropbox/Library/share/dict/altscrab
 [[ -r ~/Library/altscrab ]] && export DEFAULT_DICT=~/Library/altscrab
 
-[[ -r "${HOME}/Oracle/Oracle Content/Secure/Locker" ]] && \
+if [[ -r "${HOME}/Oracle/Oracle Content/Secure/Locker" ]]; then
     export LOCKER="${HOME}/Oracle/Oracle Content/Secure/Locker"
+    export ORACLE_PREFIX="${HOME}/Oracle/Oracle Content"
+elif [[ -r "${HOME}/Oracle Content - Accounts/Oracle Content" ]]; then
+    export LOCKER="${HOME}/Oracle Content - Accounts/Oracle Content/Secure/Locker"
+    export ORACLE_PREFIX="${HOME}/Oracle Content - Accounts/Oracle Content"
+fi
 [[ -r ~/Dropbox/Documents/Locker ]] && export LOCKER=~/Dropbox/Documents/Locker
 
 # Old cmd.exe and old qnx habits
@@ -1153,7 +1159,7 @@ alias dirhide="sudo chflags -h hidden"
 alias dirshow="sudo chflags -h nohidden"
 alias dnsinfo="scutil --dns | grep 'name\|if_\|domain\|DNS'"
 alias editscrab="${EDITOR} $(/usr/bin/which scrab)"
-alias ejecttm='[[ -e "/Volumes/USB Time Machine" ]] && diskutil eject "USB Time Machine"'
+alias ejecttm='nm="Elements_$(hostname -s)" && [[ -e "/Volumes/${nm}" ]] && diskutil eject "${nm}"'
 alias emacsclient="/Applications/Emacs.App/Contents/MacOS/bin/emacsclient"
 alias et="emacsclient -t -a ~/bin/emacst"
 alias flushdns="sudo killall -HUP mDNSResponder"

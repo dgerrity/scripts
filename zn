@@ -7,29 +7,31 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
-# 1.9 Fix to remove semicolons sometimes added by outlook
-# 1.8 Fix to remove launching directly to personal zoom channels which require https
-# 1.7 Now launches zoom meetings through command line instead of URL
-# 1.6 Now includes Exchange as a back end by default (instead of just CalDAV)
-# 1.5 Regex fix for urldefense
-# 1.4 Bug fix for those using .../my/... and zoom URLs without a prefix
-# 1.3 Better supports other conferencing solutions and solves for urldefense URLs
-# 1.2 Now supports other URLs like WebEx, bluejeans, etc.
-# 1.1 Improved debugging strings, looked for unusual URLs containing, i.e.,
-#     &nbsp and the double quote character ".  These strings sometimes appear
-#     in calendar entries.
-# 1.0 initial release
+# 1.10 20210517 Fixed typo in environment variable name
+# 1.9  20210408 Fix to remove semicolons sometimes added by outlook
+# 1.8  20210301 Fix to remove launching directly to personal zoom channels which require https
+# 1.7  20210211 Now launches zoom meetings through command line instead of URL
+# 1.6  20210121 Now includes Exchange as a back end by default (instead of just CalDAV)
+# 1.5  20210118 Regex fix for urldefense
+# 1.4  20210111 Bug fix for those using .../my/... and zoom URLs without a prefix
+# 1.3  20201226 Better supports other conferencing solutions and solves for urldefense URLs
+# 1.2  20201217 Now supports other URLs like WebEx, bluejeans, etc.
+# 1.1  20201217 Improved debugging strings, looked for unusual URLs containing, i.e.,
+#      &nbsp and the double quote character ".  These strings sometimes appear
+#      in calendar entries.
+# ---  Many little changes along the way
+# 1.0  20200610 initial version
 ###############################################################################
 
 base_url="${ZOOM_DOMAIN:-zoom.us}" # set to base URL for a zoom meeting
 me=$(basename "$0")
-version="1.9"
+version="1.10"
 
 # Define which types of calendars should be included by default.  Typical values would be CalDAV,Exchange
 # Can set in the environment as the all caps version, will override this setting.
 # Types are case insenstitive: birthday, caldav, exchange, imap, local, subscription, icloud (same as caldav)
 # Using -i overrides this setting and includes all calendar types
-default_include_types="${DEFAULT_INCLUDE_TYPS:-Exchange}"
+default_include_types="${DEFAULT_INCLUDE_TYPES:-Exchange}"
 
 ###############################################################################
 # Functions
@@ -79,6 +81,7 @@ function usage() {
 function launchmtg() {
 #   Takes a URI and launches the meeting, preferring to launch zoom directly if the URI is of the .../j/... form.
 #   Launching direct URIs of the form .../my/... is not supported, so it defaults to using the https: handler
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     if [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/j\+/[^ \"]*") ]]; then
 	zoommtg="$(echo "${1}" | sed 's/^https/zoommtg/;s|/j/|/join?action=join\&confno=|;s/?pwd=/\&pwd=/')"
 	dopen -a Zoom.us ${zoommtg}

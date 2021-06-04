@@ -64,3 +64,4 @@ export aptdev="$(networksetup -listnetworkserviceorder | grep Wi-Fi, | sed 's/.*
 export $(hostname -s | sed -e 's/[- ]/_/g' -e 's/[()]//g')="$(hostname)"
 
 [[ -e "${HOME}/.bash_env" ]] && source "${HOME}/.bash_env"
+

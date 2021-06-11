@@ -6,21 +6,24 @@
 ###############################################################################
 
 source ~/.bash_profile
-echo "Starting by looking at SSID and running ipinfo..."
-ssid="$(airport -I | grep " SSID:" | awk '{print $2}')"
-clog "Initiating, SSID is ${ssid}"
-ipinfo
-if [[ "${ssid}" == "ELPP" ]]; then
-    echo "Logging bandwidth..."
-    clog $(bandwidth papamini.local)
-fi
-echo "Taking en0 down, sleeping then up again..."
-sudo ifconfig "${aptdev:-en0}" down
-sleep 3
-sudo ifconfig "${aptdev:-en0}" up
-sleep 1
-ipinfo
-echo "Running bandwidth again..."
-clog $(bandwidth papamini.local)
-bandwidth papamini.local
 
+function main() {
+    ssid="$(airport -I | grep " SSID:" | awk '{print $2}')"
+    echo "SSID is ${ssid}"
+    speedtest --json | jq -r '. | {i:.client.isp, p:.ping, d:.download, u:.upload} | [.i, .p, .d, .u] | @tsv' | \
+	awk -F "\t" '{printf "%s %4.1fs ping, %3.0f Mbps down, %3.0f Mbps up\n", $1, $2, $3/1024/1024, $4/1024/1024}'
+    for i in $(ifconfig -lu | grep -o "en.\|utun[0-9]\+"); do
+	if [[ $(ifconfig -m ${i} | grep "inet ") ]]; then
+	    echo "Reseting ${i}"
+	    sudo ifconfig ${i} down
+	    sleep 1
+	    sudo ifconfig ${i} up
+	fi
+    done
+    ssid="$(airport -I | grep " SSID:" | awk '{print $2}')"
+    echo "SSID is ${ssid}"
+    speedtest --json | jq -r '. | {i:.client.isp, p:.ping, d:.download, u:.upload} | [.i, .p, .d, .u] | @tsv' | \
+	awk -F "\t" '{printf "%s %4.1fs ping, %3.0f Mbps down, %3.0f Mbps up\n", $1, $2, $3/1024/1024, $4/1024/1024}'
+}
+
+main

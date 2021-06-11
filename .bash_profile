@@ -293,6 +293,12 @@ function opgetany() {
     echo "Copied to clipboard"
 }
 
+function st() {
+    [[ $(\which speedtest) && $(\which jq) ]] && \
+	speedtest --json | jq -r '. | {i:.client.isp, p:.ping, d:.download, u:.upload} | [.i, .p, .d, .u] | @tsv' | \
+	    awk -F "\t" '{printf "%s %4.1fs ping, %3.0f Mbps down, %3.0f Mbps up\n", $1, $2, $3/1024/1024, $4/1024/1024}'
+}
+
 
 ###############################################################################
 # Evernote functions

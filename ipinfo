@@ -65,7 +65,7 @@ function osxDeviceFromInterface() {
     decho "osxDeviceFromInterface(${1})"
     ab=$(networksetup -listnetworkserviceorder | sed -n "/Device: ${1}/s/.*t: \(.*\),.*/\1/p")
     [[ (! ${ab}) && ("${1:0:4}" == "utun") ]] && ab=vpn
-    [[ ${#ab} -gt 8 ]] && ab=$(echo ${ab} | sed -e 's/ /-/g' -e 's/\(.......\).*\(...\)$/\1-\2/')
+    [[ ${#ab} -gt 8 ]] && ab=$(echo ${ab} | sed 's/\(......\).*\(....\)$/\1-\2/')
     echo "${ab}"
 }
 

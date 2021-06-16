@@ -230,6 +230,7 @@ function mainprog() {
     showServer imap.gmail.com "gmail" 993
     showServer smtp.gmail.com "mts/smtp" 587
     [[ ${SMTP_SERVER} ]] && showServer "${SMTP_SERVER}" "mts/oci" 587
+    [[ ${SMTP_CVC_SERVER} ]] && showServer "${SMTP_CVC_SERVER}" "mts/oci" 587
 #   showServer rsync.macports.org "rsync" ${rsyncport}
 #   showServer zulu.local ".local" 22
 

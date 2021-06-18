@@ -1,0 +1,8 @@
+#smtp config
+
+set smtp-use-starttls
+set smtp-auth=plain
+set smtp=smtp.email.us-ashburn-1.oci.oraclecloud.com:587
+set replyto=dan@centvc.com
+set smtp-auth-user=ocid1.user.oc1..aaaaaaaaneq7y5sj4i2ejtq6whie7tko7ukbvoh6uu337nwejzfq57vibrlq@ocid1.tenancy.oc1..aaaaaaaagqx5v6vmbmecwtyjabtmrwvnistzijrv26tsm7ifrlw25z4gzmga.mv.com
+set smtp-auth-password=v{b;v_5xMN634<7

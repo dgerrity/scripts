@@ -1189,13 +1189,22 @@ alias switchprinter="lpoptions -d "
 this_shell="$(ps -p $$ -o command= | sed -e's/^[.-]//' -e 's/[ -].*//')"
 if [[ "${this_shell,,}" == "bash" ]]; then
     if [[ $(/usr/bin/which brew 2>/dev/null) ]]; then
+
+	# Bash completion for brew
 	bp=$(brew --prefix)
 	[[ -f "${bp}/etc/profile.d/bash_completion.sh" ]] && source "${bp}/etc/profile.d/bash_completion.sh"
 	[[ -f "${bp}/etc/bash_completion" ]] && source "${bp}/etc/bash_completion"
+
+	# Bash completion for oci
+	vername="$(\ls ${bp}/Cellar/oci-cli/)"
+	oci_complete="${bp}/Cellar/oci-cli/${vername}/libexec/lib/python3.9/site-packages/oci_cli/bin/oci_autocomplete.sh"
+	[[ -e "${oci_complete}" ]] && source "${oci_complete}"
     fi
     if [[ $(/usr/bin/which op 2>/dev/null) ]]; then
 	source <(op completion bash)
     fi
+
+
     utils="dig dnstrace dnstracer ftp host iperf3 nc nmap nslookup ping scutil ssh traceroute wget"
     unset list; for i in ${dyndnshosts}; do list="${list} ${!i}"; done
     complete -o default -W "${list}" "${utils}" open
@@ -1219,5 +1228,5 @@ if [[ "${this_shell,,}" == "bash" ]]; then
     complete -c command type which
     complete -b builtin
     complete -W "$([[ -d ~/bin ]] && /bin/ls ~/bin)" editw
-    [[ -e "/usr/local/Cellar/oci-cli/2.25.0/libexec/lib/python3.9/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/usr/local/Cellar/oci-cli/2.25.0/libexec/lib/python3.9/site-packages/oci_cli/bin/oci_autocomplete.sh"
+    
 fi

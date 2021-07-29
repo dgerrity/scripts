@@ -2,21 +2,57 @@
 ###############################################################################
 #
 # ovpn - a bash script to join the Oracle VPN using credentials stored in
-#        an online vault (like 1Password or OCI Vault)
+#        an online vault (like OCI Vault)
 #
 # version history:
+# 2.0 2021-06 Changed format of the json stored in vault
 # 1.2 2021-03-18 Added generation of instructions
 # 1.1 2021-03-12 Added Vault
 # 1.0 2021-03-06 Initial release
 #
 ###############################################################################
 
-version="1.2"
-o_exec="/opt/cisco/anyconnect/bin/vpn"         # location of the vpn executable
-o_label="${OCI_VPN_LABEL:-website}"            # label of desired endpoint
-o_config="${HOME}/.config/op"                  # path to 1Password config file
-o_method="${OCI_VPN_DEFAULT:-1Password}"       # default method
+###############################################################################
+# JSON format of the credentials to be stored in OCI Vault
+#
+# {
+#   "default": "standard",
+#   "connections": [
+#     {
+#       "label": "standard",
+#       "endpoint": "myaccess.oraclevpn.com",
+#       "username": "dgerrity_us",
+#       "password": "mypassword",
+#       "password_override": "N",
+#       "password_prompt": "n/a"
+#     },
+#     {
+#       "label": "alternate",
+#       "endpoint": "sea-twvpn.oraclvpn.com",
+#       "username": "dgerrity_us",
+#       "password": "mypassword",
+#       "password_override": "N",
+#       "password_prompt": "n/a"
+#     },
+#     {
+#       "label": "ocna",
+#       "endpoint": "se3-p-sec-vpn-01.oracle-ocna.com",
+#       "username": "dan.gerrity",
+#       "password": "yubi",
+#       "password_override": "Y",
+#       "password_prompt": "Enter your pin and press your yubikey"
+#     }
+#   ]
+# }
+# 
+###############################################################################
 
+version="2.0"
+o_exec="/opt/cisco/anyconnect/bin/vpn"         # location of the vpn executable
+o_label="${OCI_VPN_LABEL:-standard}"           # label of desired connection
+o_method="${OCI_VPN_DEFAULT:-OCI}"             # default method
+o_key="${OCI_VPN_KEY}"                         # secret ocid
+ 
 ###############################################################################
 # Usage
 ###############################################################################
@@ -26,7 +62,7 @@ function usage() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     echo -e "${me} version ${version}"; echo
     [[ "${1}" == "version" ]] && exit 1
-    echo -e "${me} establishes or disconnects from the VPN using secrets stored in 1Password or OCI Vault."
+    echo -e "${me} establishes or disconnects from the VPN using secrets stored in OCI Vault."
     echo -e "Usage: ${me} [options] cmd"
     echo -e " "
     echo -e "Commands: ${_b_}on | off | status${_p_}"
@@ -35,16 +71,11 @@ function usage() {
     echo -e "  -d           debug"
     echo -e "  -h           this message"
     echo -e "  -v           verbose"
-    echo -e "  -1           use 1Password as the source for the credentials"
-    echo -e "  -c [dir]     override the default locations for cli configuration files (if not found, resorts to std)"
-    echo -e "  -e [domain]  override the endpoint found in the list of 'websites'"
+    echo -e "  -e [domain]  override the endpoint to be used"
     echo -e "  -i           write the vault instructions to stdout"
     echo -e "  -k [key]     key to use to find the entry containing the credentials (default from environment)"
-    echo -e "  -l [label]   use the specified label to locate the correct endpoint in the entry's list of \'websites\'"
-    echo -e "               list of websites e.g., \"myaccess\" (default \"${o_label}\")"
-    echo -e "  -o           use OCI as the source for the credentials"
+    echo -e "  -l [label]   use the specified label to locate the correct tuple (endpoint, username, password)"
     echo -e "  -p [pwd]     override the password"
-    echo -e "  -s [session] provide a 1Password login session id to use (default in environemnt or asks every time)"
     echo -e "  -u [uname]   override the username"
     echo -e "  -x [file]    override the default location of the cisco anyconnect vpn executable (default ${o_exec})"
     echo -e " "
@@ -78,37 +109,10 @@ function enter() {
 # Functions
 ###############################################################################
 
-1PasswordIsWorking() {
-    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
-    vecho "Checking to see if 1Password is installed and configured"
-    [[ ! "${o_key}" ]] && o_key="${OP_VPN_KEY}"
-    if [[ ! ${o_session} ]]; then
-        [[ ! -e "${o_config}/config" ]] && o_config="${HOME}/.config/op"
-        [[ ! -e "${o_config}/config" ]] && o_config="${HOME}/.op"
-        if [[ -e "${o_config}/config" ]]; then
-            suffix="$(jq -r '.accounts[0].shorthand' "${o_config}/config")"
-            decho "suffix is ${suffix}"
-            envar='OP_SESSION_'"${suffix}"
-            o_session="${!envar}"
-        fi
-    fi
-    vecho "Using session key \"${o_session}\" derived from \"${envar}\""
-    vecho "Looking for 1Password item with key \"${o_key}\""
-    [[ "${envar}" && "${o_key}" ]] && eval "$(op signin --session "${o_session}" 2> /dev/null)"
-    [[ ! "${o_username}" ]] && o_username="$(op get item "${o_key}" --fields username --session "${o_session}" 2> /dev/null)"
-    [[ ! "${o_password}" ]] && o_password="$(op get item "${o_key}" --fields password --session "${o_session}" 2> /dev/null)"
-    [[ ! "${o_endpoint}" ]] && o_endpoint="$(op get item "${o_key}" --session "${o_session}" 2> /dev/null |\
-            jq '.overview.URLs[] | select(.l | contains("'"${o_label}"'")).u' |  sed 's/\"//g' | sed 's/https://')"
-    [[ "${o_debug}" ]] && for i in o_session o_key o_username o_password o_endpoint; do echo "${i}: ${!i}"; done
-    vecho "Found username \"${o_username}\" and endpoint \"${o_endpoint}\""
-    [[ "${o_username}" && "${o_password}" && "${o_endpoint}" ]]
-}
-
 OCIIsWorking() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     vecho "Checking to see if the oci cli is installed and configured"
-    [[ ! "${o_key}" ]] && o_key="${OCI_VPN_KEY}"
-    vecho "Looking for OCI secret with key \"${o_key}\""
+    decho "Looking for OCI secret with key \"${o_key}\""
     if json="$(oci secrets secret-bundle get --secret-id "${o_key}" 2> /dev/null)"; then
         json="$(echo "${json}" | jq -r '.data."secret-bundle-content".content' | base64 -d)"
         [[ ! ${o_username} ]] && o_username="$(echo "${json}" | jq -r '.username')"
@@ -124,6 +128,25 @@ OCIIsWorking() {
     [[ "${o_username}" && "${o_password}" && "${o_endpoint}" ]]
 }
 
+getCredentialsFromOCI() {
+    # Get the json blob frm the vault and report an error if there is a problem
+    # Determine if we have specified a label. If not, read it with jq .default
+    # Select the endpoint using .connections[] | select(.label == ${label})
+    # get the endpoint (-r .endpoint), the username (-r .username)
+    # find out if a password is necessary, if so, see if one has been supplied, if not, ask for it using the prompt
+    # we're done
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    if bundle="$(oci secrets secret-bundle get --secret-id "${o_key}" 2> /dev/null)"; then
+        json="$(echo "${bundle}" | jq -r '.data."secret-bundle-content".content' | base64 -d)"
+	[[ ${o_debug} ]] && echo ${json} | jq .
+	[[ ! ${json} ]] && echo "JSON stored in secret is an invalid format or empty ${bundle}" && exit 300
+	[[ ! ${o_label} ]] && o_label="$(echo "${json}" | jq '.default')"
+	decho "Label to find is ${o_label}"
+	json="$(echo ${json} | jq '.connections[] | select(.label == "'${o_label}\"\))"
+	decho "${json}"
+    fi
+}
+
 joinvpn() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     if [[ "$(uname)" == "Darwin" ]]; then
@@ -136,14 +159,13 @@ joinvpn() {
     fi
     decho "Getting credentials"
     case "${o_method}" in
-        OCI)       if ! OCIIsWorking "$@"; then
-                       echo "OCI CLI lookup problem; invalid oci setup or bad key provided.  Use -v for details."
-                       exit 100
-                   fi;;
-        1Password) if ! 1PasswordIsWorking "$@"; then
-                       echo "1Password lookup problem, invalid key, session, or password provided.  Use -v for details."
-                       exit 101
-                   fi;;
+        OCI) if ! OCIIsWorking "$@"; then
+                echo "OCI CLI lookup problem; invalid oci setup or bad key provided.  Use -v for details."
+                exit 100
+             fi
+	     getCredentialsFromOCI
+	     exit 0;;
+	*)   echo "Unsupoorted method of getting credentials" && exit 100;;
     esac
     echo "Connecting to ${o_endpoint} with username ${o_username}"
     if [[ ${o_verbose} ]]; then
@@ -157,10 +179,6 @@ joinvpn() {
 check_method() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     case "${o_method}" in
-        1Password) if [[ ! "$(\which op)" ]]; then
-                       echo "Missing one password command-line interface."
-                       exit 1
-                   fi;;
         OCI)       if [[ ! "$(\which oci)" ]]; then
                        echo "Missing oci command-line interface."
                        exit 1
@@ -180,37 +198,14 @@ check_exec() {
 write_instructions() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
 
-    if 1PasswordIsWorking "$@"; then
-        echo -e "${_g_}1Password appears to be configured properly.${_p_}\n"
-    fi
     if OCIIsWorking "$@"; then
         echo -e "${_g_}OCI appears to be configured properly.${_p_}\n"
     fi
-    local l_u="${o_username:-your_username}"
-    local l_p="${o_password:-your_password}"
-    local l_e="${o_endpoint:-your_endpoint.companyvpn.com}"
-
-    echo "For OCI Vault"
     echo "1. Create a new Vault or use an existing one"
     echo "2. Create a new secret or create a new version of an existing one"
-    echo "3. Copy the ocid of the secret into your environment.  Use -k (key) to specify or set in your environment"
-    echo "   as OCI_VPN_KEY (currently \"${OCI_VPN_KEY}\")."
-    echo "4. Place the following JSON into the secret: "
-    echo -e "{\"username\":\"${l_u}\",\"password\":\"${l_p}\",\"endpoints\":[{\"l\":\"website\",\"u\":\"${l_e}\"},{\"l\":\"alternate\",\"u\":\"other.companyvpn.com\"}]}" | jq
-    echo "For 1Password"
-    echo -e "1. Create a new login with ${_y_}item name${_p_} like ${_b_}Login VPN${_p_}"
-    echo -e "2. ${_y_}username${_p_} should be your vpn username, ${_b_}${l_u}${_p_}"
-    echo -e "3. ${_y_}password${_p_} should be your vpn password, ${_b_}${l_p}${_p_}."
-    echo -e "4. Create as many endpoints as you need as websites; optionally changing the label website to something descriptive."
-    echo -en "   For example, ${_y_}website${_p_} with the value ${_b_}${l_e}${_p_}"
-    echo -e " and ${_y_}alternate${_p_} with the value ${_b_}other.companyvpn.com${_p_}."
-    echo "5. The endpoint will be looked up using the label you use.  Specify in the command line with -l label"
-    echo "   or set in your environment as OCI_VPN_LABEL"
-    echo -e "6. Get the key for the item using ${_g_}$ op get item \"${_p_}${_y_}item name${_p_}${_g_}\" | jq '.uuid'${_p_}"
-    echo "7. The uuid will be the key you use.  Specify in the command line with -k (key)"
-    echo "   or set in your environment as OP_VPN_KEY (currently \"${OP_VPN_KEY}\")"
-    echo " "
-    echo "Also, you may set OP_VPN_LABEL in your environment to specify the label of the endpoint to use (e.g., alternate)."
+    echo "3. Copy the ocid of the secret into your environment as OCI_VPN_KEY"
+    echo "   (currently \"${OCI_VPN_KEY}\").  Use -k key to override this."
+    echo "4. See the script ${0} for the JSON format to put into the secret."
 }
 
 main() {
@@ -261,8 +256,6 @@ while getopts ":dhv1c:e:ik:l:op:s:u:x:" option; do
         d) o_debug=true; o_verbose=true;;
         h) usage 0;;
         v) o_verbose=true;;
-        1) o_method="1Password";;
-        c) o_config=${OPTARG};;
         e) o_endpoint=${OPTARG};;
         i) o_instructions=true;;
         k) o_key=${OPTARG};;
@@ -281,7 +274,7 @@ done
 
 o_cmd="${!OPTIND:-connect}"
 
-[[ ${o_debug} ]] && for i in o_debug o_verbose o_cmd o_config o_endpoint o_exec o_key o_method o_password o_username \
+[[ ${o_debug} ]] && for i in o_debug o_verbose o_cmd o_endpoint o_exec o_key o_method o_password o_username \
                                      o_label o_session o_username o_url o_instructions BASH_VERSION SHELL; do
     echo -n "${i}=\"${!i}\" "
 done

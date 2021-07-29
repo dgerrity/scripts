@@ -7,6 +7,7 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.11 20210728 Added parsing for zoom meetings sent from google calendars
 # 1.10 20210517 Fixed typo in environment variable name, now backward compatible with bash 3
 # 1.9  20210408 Fix to remove semicolons sometimes added by outlook
 # 1.8  20210301 Fix to remove launching directly to personal zoom channels which require https
@@ -116,9 +117,14 @@ function zoomical() {
 	    vecho "Topic: |${topic[i]}|"
         elif [[ ! "${url[i]}" ]] && (validConferencingURL "${line}"); then
             decho "Extracting URL from |${line}|"
-	    if [[ $(echo "${line}" | grep urldefense) ]]; then
+	    if [[ $(echo "${line}" | egrep "https.* <https.*>") ]]; then
+		# Sent by Google Calendar
+		url[i]=$(echo "${line}" | egrep -o 'https?://[^ <$;]+' | sed 's|[[:blank:]]||g' | head -n1)
+	    elif [[ $(echo "${line}" | grep urldefense) ]]; then # processed 
+		# Using the URL provided by URLDefense
 		url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
 	    else
+		# A normal meeting URL
 		url[i]=$(echo "${line}" | egrep -o 'https?://[^ <$;]+' | sed 's|[[:blank:]]||g')
 	    fi
             vecho "URL: |${url[i]}|"
@@ -129,6 +135,13 @@ function zoomical() {
         fi
     done < <(icalBuddy -ea ${includeType} -b "%%%" eventsFrom:"${offsetMins}" to:"${offsetMins}")
     vecho "Number of entries found: ${#topic[@]}"
+    n=${#topic[@]}
+    for (( i=0; i<n; i++ )); do
+	if [[ "${topic[i]}" =~ ^Canceled ]]; then
+	    vecho "Found Canceled: in ${topic[i]}, skipping"
+	    unset topic[i]; unset url[i]; unset block[i]
+	fi
+    done
     n=${#topic[@]}
     if [[ ${n} -eq 0 ]]; then
         # No matching events    

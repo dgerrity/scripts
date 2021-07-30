@@ -134,15 +134,17 @@ function zoomical() {
             vecho "Block: |${block[i]}|"
         fi
     done < <(icalBuddy -ea ${includeType} -b "%%%" eventsFrom:"${offsetMins}" to:"${offsetMins}")
-    vecho "Number of entries found: ${#topic[@]}"
     n=${#topic[@]}
+    vecho "Number of entries found: ${n}"
     for (( i=0; i<n; i++ )); do
 	if [[ "${topic[i]}" =~ ^Canceled ]]; then
-	    vecho "Found Canceled: in ${topic[i]}, skipping"
-	    unset topic[i]; unset url[i]; unset block[i]
+	    vecho "Found Canceled: in number ${i}: ${topic[i]}, skipping"
+	    unset topic[i]; unset url[i]; unset block[i]                  # Remove element
 	fi
     done
+    topic=( "${topic[@]}" ); url=( "${url[@]}" ); block=( "${block[@]}" ) # Compact array
     n=${#topic[@]}
+    vecho "Number of entries found: ${n}"
     if [[ ${n} -eq 0 ]]; then
         # No matching events    
         vecho "No events at ${offsetMins}"

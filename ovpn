@@ -131,9 +131,6 @@ getCredentialsFromOCI() {
     if bundle="$(oci secrets secret-bundle get --secret-id "${o_ocid}" 2> /dev/null)"; then
         json="$(echo "${bundle}" | jq -r '.data."secret-bundle-content".content' 2>/dev/null | base64 -d)"
 	[[ ${#json} -lt 50 ]] && echo "Unexpected secret format ${bundle}." && exit 22
-	### DELETE ME
-	json="$(cat secret.json)"
-	### DELETE ME
 	vers="$(echo "${json}" | jq -r '.version')"
 	if [[ "${vers}" == "null" ]]; then
 	    echo "Invalid secret version - have you updated your format to version 2?" && exit 23
@@ -250,9 +247,10 @@ main() {
             vecho "Getting state"
             check_exec "$@"
             ${o_exec} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
-            if pgrep "Cisco AnyConnect" &> /dev/null; then echo "  client: Running"; fi
-            echo "endpoint: $(dig +short -x "$("${o_exec}" stats | grep "Server Address" | awk '{print $3}')")";;
-
+            if pgrep "Cisco AnyConnect" &> /dev/null; then
+		echo "  client: Running"
+		echo "endpoint: $(dig +short -x "$("${o_exec}" stats | grep "Server Address" | awk '{print $3}')")"
+	    fi;;
         *)  [[ "${1}" ]] && echo "Invalid command \"${1}\" provided"
             usage 2;;
     esac

@@ -138,8 +138,7 @@ function zoomical() {
     done < <(icalBuddy -ea ${includeType} -b "%%%" eventsFrom:"${offsetMins}" to:"${offsetMins}")
     decho "Looping through what we got."
     n=${#topic[@]}
-    [[ ${o_debug} ]] && for (( i=0; i<${n}; i++ )); do echo "${i}: ${topic[i]} ${block[i]} ${url[i]}" ; done;
-    vecho "Number of entries found: ${n}"
+    decho "Number of entries found before cancellations: ${n}"
     for (( i=0; i<n; i++ )); do
 	[[ ! "${url[i]}" ]] && url[i]="invalid URL"
 	[[ ! "${block[i]}" ]] && block[i]="invalid time"
@@ -150,7 +149,7 @@ function zoomical() {
     done
     topic=( "${topic[@]}" ); url=( "${url[@]}" ); block=( "${block[@]}" ) # Compact array
     n=${#topic[@]}
-    vecho "Number of entries found after cancellations: ${n}"
+    decho "Number of entries found after cancellations: ${n}"
     [[ ${o_debug} ]] && for (( i=0; i<${n}; i++ )); do echo "${i}: ${topic[i]} ${block[i]} ${url[i]}" ; done;
     if [[ ${n} -eq 0 ]]; then
         # No matching events    
@@ -172,7 +171,7 @@ function zoomical() {
         # More than one entry found
         vecho "More than one entry found, processing"
         for (( i=0; i<n; i++ )); do
-            echo "$(( i+1 )) Join ${topic[i]}; ${block[i]} (${url[i]})"
+            echo "$(( i+1 )) Join ${topic[i]}; ${block[i]}"
         done    
         read -rp "Join which meeting? [cancel] " response
 	response=$(echo "${response}" | tr [:upper:] [:lower:])

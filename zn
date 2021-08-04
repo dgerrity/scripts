@@ -86,7 +86,7 @@ function launchmtg() {
     if [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/j\+/[^ \"]*") ]]; then
 	zoommtg="$(echo "${1}" | sed 's/^https/zoommtg/;s|/j/|/join?action=join\&confno=|;s/?pwd=/\&pwd=/')"
 	dopen -a Zoom.us ${zoommtg}
-    elif [[ $(echo "${1}" | grep "https://[[:alnum:]]*\.?") ]]; then
+    elif [[ $(echo "${1}" | grep "https://[[:alnum:]]*\.\?") ]]; then
 	dopen "${1}"
     else
 	echo "Not a valid web conference meeting - skipping" && return 4
@@ -102,6 +102,7 @@ function validConferencingURL() {
     [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?webex.com/[^ \"]*") ]]         && return   # webex
     [[ $(echo "${1}" | grep -o "https://bluejeans.com/[[:alnum:]]*/[[:alnum:]]*") ]]   && return   # bluejeans
     [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?doxy.me") ]]                   && return   # doxy me
+    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?arm.com/[[:alnum:]]*") ]]      && return   # arm
     false
 }
 

@@ -10,8 +10,8 @@ source ~/.bash_profile
 function main() {
     ssid="$(airport -I | grep " SSID:" | awk '{print $2}')"
     echo "SSID is ${ssid}"
-    speedtest --json | jq -r '. | {i:.client.isp, p:.ping, d:.download, u:.upload} | [.i, .p, .d, .u] | @tsv' | \
-	awk -F "\t" '{printf "%s %4.1fs ping, %3.0f Mbps down, %3.0f Mbps up\n", $1, $2, $3/1024/1024, $4/1024/1024}'
+#    speedtest --json | jq -r '. | {i:.client.isp, p:.ping, d:.download, u:.upload} | [.i, .p, .d, .u] | @tsv' | \
+#	awk -F "\t" '{printf "%s %4.1fs ping, %3.0f Mbps down, %3.0f Mbps up\n", $1, $2, $3/1024/1024, $4/1024/1024}'
     for i in $(ifconfig -lu | grep -o "en.\|utun[0-9]\+"); do
 	if [[ $(ifconfig -m ${i} | grep "inet ") ]]; then
 	    echo "Reseting ${i}"
@@ -24,6 +24,7 @@ function main() {
     echo "SSID is ${ssid}"
     speedtest --json | jq -r '. | {i:.client.isp, p:.ping, d:.download, u:.upload} | [.i, .p, .d, .u] | @tsv' | \
 	awk -F "\t" '{printf "%s %4.1fs ping, %3.0f Mbps down, %3.0f Mbps up\n", $1, $2, $3/1024/1024, $4/1024/1024}'
+    bandwidth
 }
 
 main

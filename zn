@@ -86,8 +86,10 @@ function launchmtg() {
     if [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/j\+/[^ \"]*") ]]; then
 	zoommtg="$(echo "${1}" | sed 's/^https/zoommtg/;s|/j/|/join?action=join\&confno=|;s/?pwd=/\&pwd=/')"
 	dopen -a Zoom.us ${zoommtg}
-    else
+    elif [[ $(echo "${1}" | grep "https://[[:alnum:]]*\.?") ]]; then
 	dopen "${1}"
+    else
+	echo "Not a valid web conference meeting - skipping" && return 4
     fi
 }    
 	
@@ -134,9 +136,13 @@ function zoomical() {
             vecho "Block: |${block[i]}|"
         fi
     done < <(icalBuddy -ea ${includeType} -b "%%%" eventsFrom:"${offsetMins}" to:"${offsetMins}")
+    decho "Looping through what we got."
     n=${#topic[@]}
+    [[ ${o_debug} ]] && for (( i=0; i<${n}; i++ )); do echo "${i}: ${topic[i]} ${block[i]} ${url[i]}" ; done;
     vecho "Number of entries found: ${n}"
     for (( i=0; i<n; i++ )); do
+	[[ ! "${url[i]}" ]] && url[i]="invalid URL"
+	[[ ! "${block[i]}" ]] && block[i]="invalid time"
 	if [[ "${topic[i]}" =~ ^Canceled ]]; then
 	    vecho "Found Canceled: in number ${i}: ${topic[i]}, skipping"
 	    unset topic[i]; unset url[i]; unset block[i]                  # Remove element
@@ -144,7 +150,8 @@ function zoomical() {
     done
     topic=( "${topic[@]}" ); url=( "${url[@]}" ); block=( "${block[@]}" ) # Compact array
     n=${#topic[@]}
-    vecho "Number of entries found: ${n}"
+    vecho "Number of entries found after cancellations: ${n}"
+    [[ ${o_debug} ]] && for (( i=0; i<${n}; i++ )); do echo "${i}: ${topic[i]} ${block[i]} ${url[i]}" ; done;
     if [[ ${n} -eq 0 ]]; then
         # No matching events    
         vecho "No events at ${offsetMins}"
@@ -165,7 +172,7 @@ function zoomical() {
         # More than one entry found
         vecho "More than one entry found, processing"
         for (( i=0; i<n; i++ )); do
-            echo "$(( i+1 )) Join ${topic[i]}; ${block[i]}"
+            echo "$(( i+1 )) Join ${topic[i]}; ${block[i]} (${url[i]})"
         done    
         read -rp "Join which meeting? [cancel] " response
 	response=$(echo "${response}" | tr [:upper:] [:lower:])

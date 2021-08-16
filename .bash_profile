@@ -568,17 +568,15 @@ function aria() {
     if [[ "${netloc}" == "Disconnected" ]]; then echo ${netloc}; return 1; fi
     if [[ ${1} =~ \. || ${1} =~ \@ ]]; then
 	sstr="${1}"
-	stype="HOME"
     elif [[ ${2} ]]; then
 	sstr="${1}+${2}"
 	li "$@"
     elif [[ ${1} ]]; then
 	sstr="@${1}"
-	stype="PERSON"
     else
 	sstr=""
     fi
-    url="https://people.oracle.com/apex/f?p=8000:${stype}:4058490824176:::::#${sstr}"
+    url="https://people.oracle.com/apex/f?p=8000:1:13335495794387#${sstr}"
     open "${url}"
 }
 

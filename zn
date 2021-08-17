@@ -7,6 +7,7 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.12 20210817 Added -c to copy zoom information to the clipboard
 # 1.11 20210728 Added parsing for zoom meetings sent from google calendars
 # 1.10 20210517 Fixed typo in environment variable name, now backward compatible with bash 3
 # 1.9  20210408 Fix to remove semicolons sometimes added by outlook
@@ -194,6 +195,16 @@ function zoomwith() {
     launchmtg "${!envar}"
 }
 
+function zoomcopy() {
+#   Copies ZOOM_ME information to the clipboard
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    local envar="ZOOM_ME"
+    [[ ! ${!envar} ]] && echo "Cannot copy information to the clipboard because ${envar} is not in the environment." && exit 6
+    echo "${!envar}" | pbcopy
+    echo "Information copied to the clipboard."
+}
+
+
 function mainprog() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     if [[ ! $(which icalBuddy) ]]; then
@@ -228,10 +239,11 @@ function mainprog() {
 ##############################################################################
 
 unset o_debug o_include o_minutes o_prompt o_verbose o_with
-while getopts ":dhipm:nu:vw:" option; do
+while getopts ":dhcimn:pn:vw:" option; do
     case ${option} in
         d) o_debug=true; o_verbose=true;;
         h) usage;;
+	c) zoomcopy && exit 0;;
         i) o_include=true;;
         m) o_minutes=${OPTARG}
            [[ ! $(echo "${o_minutes}" | grep "^[-+]\?[0-9]\{1,4\}$") ]] && usage "$@"

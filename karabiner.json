@@ -6,7 +6,7 @@
     },
     "profiles": [
         {
-            "complex_modifications": {
+           "complex_modifications": {
                 "parameters": {
                     "basic.simultaneous_threshold_milliseconds": 50,
                     "basic.to_delayed_action_delay_milliseconds": 500,
@@ -830,7 +830,8 @@
                                         "bundle_identifiers": [
                                             "^com\\.microsoft\\.Excel$",
                                             "^com\\.microsoft\\.Powerpoint$",
-                                            "^com\\.microsoft\\.Word$"
+                                            "^com\\.microsoft\\.Word$",
+					    "^com\\.microsoft\\.Outlook$"
                                         ],
                                         "type": "frontmost_application_if"
                                     }
@@ -860,7 +861,8 @@
                                         "bundle_identifiers": [
                                             "^com\\.microsoft\\.Excel$",
                                             "^com\\.microsoft\\.Powerpoint$",
-                                            "^com\\.microsoft\\.Word$"
+                                            "^com\\.microsoft\\.Word$",
+                                            "^com\\.microsoft\\.Outlook$"
                                         ],
                                         "type": "frontmost_application_if"
                                     }
@@ -1595,7 +1597,8 @@
                                         "bundle_identifiers": [
                                             "^com\\.microsoft\\.Excel$",
                                             "^com\\.microsoft\\.Powerpoint$",
-                                            "^com\\.microsoft\\.Word$"
+                                            "^com\\.microsoft\\.Word$",
+                                            "^com\\.microsoft\\.Outlook$"
                                         ],
                                         "type": "frontmost_application_if"
                                     },

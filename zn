@@ -129,7 +129,7 @@ function zoomical() {
 		url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
 	    else
 		# A normal meeting URL
-		url[i]=$(echo "${line}" | egrep -o 'https?://[^ <$;]+' | sed 's|[[:blank:]]||g')
+		url[i]=$(echo "${line}" | egrep -o 'https?://[^ ()<$;]+' | sed 's|[[:blank:]]||g')
 	    fi
             vecho "URL: |${url[i]}|"
         elif [[ ! ${block[i]} && $(echo "${line}" | grep "[0-9]\{1,2\}:[0-9]\{2\} [AP]M - [0-9]\{1,2\}") ]]; then

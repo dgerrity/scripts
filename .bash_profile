@@ -1010,7 +1010,6 @@ function symlink() {
 }
 
 function edit() {
-#    [[ ! "$(ps ax | grep "[e]macs --")" ]] && emacs --daemon
     for i in "$@"; do
 	if [[ ! -e "${i}" ]]; then
 	    read -p "Create new file ${i}? [y] " ans
@@ -1130,7 +1129,6 @@ alias wx='ansiwweather'
 # Better unix
 export CLICOLOR=1
 export LSCOLORS=dxfxcxdxbxegedabagacad
-export EDITOR="emacs"
 export REPLYTO="dan@gerrity.org"
 alias envp="env | sort -f"
 alias envg="env | sort -f | grep -i"
@@ -1154,6 +1152,12 @@ alias top="top -o cpu"
 alias webroot="cd /Library/WebServer/Documents"
 alias which="\type -a"
 
+if pgrep -fq "emacs.*daemon$"; then
+    export EDITOR=emacsclient
+else
+    export EDITOR=emacs;
+fi
+
 # Mac stuff
 function define() { open "dict://${1}"; }
 alias cisco='open -a "Cisco AnyConnect Secure Mobility Client"'
@@ -1164,7 +1168,6 @@ alias dirshow="sudo chflags -h nohidden"
 alias dnsinfo="scutil --dns | grep 'name\|if_\|domain\|DNS'"
 alias editscrab="${EDITOR} $(/usr/bin/which scrab)"
 alias ejecttm='nm="Elements_$(hostname -s)" && [[ -e "/Volumes/${nm}" ]] && diskutil eject "${nm}"'
-alias emacsclient="/Applications/Emacs.App/Contents/MacOS/bin/emacsclient"
 alias et="emacsclient -t -a ~/bin/emacst"
 alias flushdns="sudo killall -HUP mDNSResponder"
 alias geek="osascript -e 'tell application \"Geektool\" to refresh all'"

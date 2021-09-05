@@ -65,7 +65,8 @@ function osxDeviceFromInterface() {
     decho "osxDeviceFromInterface(${1})"
     ab=$(networksetup -listnetworkserviceorder | sed -n "/Device: ${1}/s/.*t: \(.*\),.*/\1/p")
     [[ (! ${ab}) && ("${1:0:4}" == "utun") ]] && ab=vpn
-    [[ ${#ab} -gt 8 ]] && ab=$(echo ${ab} | sed 's/\(......\).*\(....\)$/\1-\2/')
+    #   [[ ${#ab} -gt 8 ]] && ab=$(echo ${ab} | sed 's/\(......\).*\(....\)$/\1-\2/')
+    [[ ${#ab} -gt 8 ]] && ab="${ab:0:7}"
     echo "${ab}"
 }
 
@@ -235,17 +236,17 @@ function mainprog() {
 #   showServer zulu.local ".local" 22
 
 #   Check to see if the SOCKS proxy is active
-    if [[ ${proxyport} ]]; then
-	[[ $(ps ax | grep "[^o][s]sh.*${proxyport}") ]] && \
-	    act="active" || act="inactive"
-	[[ $(ps ax | grep "[o]ssh.*${proxyport}") ]] && act="active (auto)"
-	rch="$(scutil -r ${proxy} | sed -e 's/,.*$//' -e 's/^R/r/')"
-	printl proxy: ${proxy_ip} ${proxy_gw} ${rch} ${act}
-    else
-	printl proxy: "n/a"
-    fi
-    [[ $(ps ax | grep "[P]roxifier") ]] && \
-	printl proxyifer: active || printl proxyfier: inactive
+    # if [[ ${proxyport} ]]; then
+    # 	[[ $(ps ax | grep "[^o][s]sh.*${proxyport}") ]] && \
+    # 	    act="active" || act="inactive"
+    # 	[[ $(ps ax | grep "[o]ssh.*${proxyport}") ]] && act="active (auto)"
+    # 	rch="$(scutil -r ${proxy} | sed -e 's/,.*$//' -e 's/^R/r/')"
+    # 	printl proxy: ${proxy_ip} ${proxy_gw} ${rch} ${act}
+    # else
+    # 	printl proxy: "n/a"
+    # fi
+    # [[ $(ps ax | grep "[P]roxifier") ]] && \
+    # 	printl proxyifer: active || printl proxyfier: inactive
 
 #   Get public IP address
     str="unavailable"

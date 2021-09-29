@@ -1039,7 +1039,7 @@ case $(hostname -s) in
     dgerrity-mac)  fgc=${fgcGrey};;
     risc)          fgc=${fgcBlue};;
     rose)          fgc=${fgcRed};;
-    dg-mac)        fgc=${fccGreen};;
+    dg-mac)        fgc=${fgcGreen};;
     *)             fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3

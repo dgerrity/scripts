@@ -1,5 +1,5 @@
 .bash_env filter=git-crypt diff=git-crypt
 *.key filter=git-crypt diff=git-crypt
 config filter=git-crypt diff=git-crypt
-
+new-mac-setup.md filter=git-crypt diff=git-crypt
 known_mac_addresses filter=git-crypt diff=git-crypt

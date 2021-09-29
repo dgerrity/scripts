@@ -1031,13 +1031,15 @@ function edit() {
 ###############################################################################
 
 logger -i "$(me) executed by $(ps -p $PPID -o args=), pid $$"
-fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcBrown=33; fgcRed=31; bgcGrey=47; bgcNone=49
-bold=";1"; bgc=${bgcNone}; fgc=${fgcBlack}
+fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcYello=33; fgcRed=31; fgcGreen=32;
+bgcGrey=47; bgcNone=49
+fgc=${fgcBlack}; bgc=${bgcNone}; bold=";1"
 case $(hostname -s) in
-    papamini)      fgc=${fgcBrown};;
+    papamini)      fgc=${fgcYellow};;
     dgerrity-mac)  fgc=${fgcGrey};;
     risc)          fgc=${fgcBlue};;
     rose)          fgc=${fgcRed};;
+    dg-mac)        fgc=${fccGreen};;
     *)             fgc=${fgcBlack}; bgc=${bgcGrey};;
 esac
 export PROMPT_DIRTRIM=3

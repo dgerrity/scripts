@@ -12,10 +12,10 @@ function symlink()
         echo "ln -s remote-path local-name";
         return 1;
     elif [[ -L "${2}" ]]; then
-        echo "Skipping $(\ls -l "${2}" | cut -c43-): Target file exists and is a symlink."
+        echo "${2}"
         return 2;
     elif [[ -e "${2}" ]]; then
-	echo "Not linking: Target file ${2} exists and is not a symlink."
+	echo "Skipping $(\ls -l "${2}" | cut -c43-): Target file exists and is NOT symlink."
 	return 3;
     elif [[ ! -e "${1}" ]]; then
         echo "Not linking: Remote file or directory ${1} doesn't exist";
@@ -50,7 +50,6 @@ linkfile findprefs
 linkfile hang
 linkfile inline
 linkfile ipinfo
-linkfile join-next-zoom
 linkfile proxy
 linkfile ovpn
 linkfile scrab
@@ -63,16 +62,11 @@ linkfile zn
 [[ -e /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport ]] && \
     symlink /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport "${HOME}/bin/airport"
 
-[[ ! -d ~/Library/KeyBindings ]] && mkdir ~/Library/KeyBindings
-cp "$(pwd)/DefaultKeyBinding.dict" "${HOME}/Library/KeyBindings/DefaultKeyBinding.dict"
-
 symlink "$(pwd)/init.el" "${HOME}/.emacs.d/init.el"
 [[ ! -d "${HOME}/.emacs.d/add-ins" ]] && mkdir "${HOME}/.emacs.d/add-ins"
 symlink "$(pwd)/applescript.el" "${HOME}/.emacs.d/add-ins/applescript.el"
 symlink "$(pwd)/editorconfig.el" "${HOME}/.emacs.d/add-ins/editorconfig.el"
 symlink "$(pwd)/markdown-mode.el" "${HOME}/.emacs.d/add-ins/markdown-mode.el"
-
-symlink "$(pwd)/karabiner.json" "${HOME}/.config/karabiner/karabiner.json"
 
 echo ">> Copy com.centvc.socat_listener.plist if desired into ${HOME}/Library/LaunchAgents"
 echo ">> Copy $(pwd)/com.centvc.iperf3.plist if desired into ${HOME}/Library/LaunchAgents"

@@ -13,7 +13,8 @@
  '(inhibit-startup-buffer-menu t)
  '(inhibit-startup-screen t)
  '(initial-scratch-message nil)
- '(package-selected-packages '(rainbow-delimiters smartparens))
+ '(package-selected-packages
+   '(markdown-preview-mode markdown-mode ## rainbow-delimiters smartparens))
  '(send-mail-function 'sendmail-send-it))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
@@ -103,12 +104,8 @@ Uses `current-date-time-format' for the formatting the date/time."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (require 'package)
-(add-to-list 'package-archives
-    '("marmalade" .
-        "http://marmalade-repo.org/packages/"))
+;;(add-to-list 'package-archives '("marmalade" . "http://marmalade-repo.org/packages/"))
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-;; Comment/uncomment this line to enable MELPA Stable if desired.  See `package-archive-priorities`
-;; and `package-pinned-packages`. Most users will not need or want to do this.
 ;;(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 (package-initialize)
 

@@ -106,7 +106,7 @@ buffers which are visiting a file."
   :group 'markdown
   :type 'boolean)
 
-(defcustom markdown-open-command nil
+(defcustom markdown-open-command "/Applications/Marked 2.app/Contents/MacOS/Marked 2"
   "Command used for opening Markdown files directly.
 For example, a standalone Markdown previewer.  This command will
 be called with a single argument: the filename of the current

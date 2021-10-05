@@ -95,7 +95,7 @@ Uses `current-date-time-format' for the formatting the date/time."
   "run Marked on the current file and revert the buffer"
   (interactive)
   (shell-command 
-   (format "open -a /Applications/Marked.app %s" 
+   (format "open -a /Applications/Marked 2.app %s" 
        (shell-quote-argument (buffer-file-name))))
 )
 

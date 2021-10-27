@@ -239,7 +239,7 @@ function mainprog() {
 ##############################################################################
 
 unset o_debug o_include o_minutes o_prompt o_verbose o_with
-while getopts ":dhcimn:pn:vw:" option; do
+while getopts ":dhcim:n:pn:vw:" option; do
     case ${option} in
         d) o_debug=true; o_verbose=true;;
         h) usage;;

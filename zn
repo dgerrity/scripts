@@ -7,6 +7,7 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.13 20211203 Maybe fixed webex using egrep instead of sed.
 # 1.12 20210817 Added -c to copy zoom information to the clipboard
 # 1.11 20210728 Added parsing for zoom meetings sent from google calendars
 # 1.10 20210517 Fixed typo in environment variable name, now backward compatible with bash 3
@@ -99,8 +100,8 @@ function validConferencingURL() {
 #   Unfortunately, calendar entries often include multiple URLs, including URLs for getting help or local phone numbers    
 #   These definitions are not foolproof and could use some help.
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
-    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/.\+/[^ \"]*") ]]   && return   # zoom
-    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?webex.com/[^ \"]*") ]]         && return   # webex
+    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/.\+/[^ \"_]*") ]]  && return   # zoom
+    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?webex.com/[^ \"<_]*") ]]       && return   # webex
     [[ $(echo "${1}" | grep -o "https://bluejeans.com/[[:alnum:]]*/[[:alnum:]]*") ]]   && return   # bluejeans
     [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?doxy.me") ]]                   && return   # doxy me
     [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?arm.com/[[:alnum:]]*") ]]      && return   # arm
@@ -126,7 +127,8 @@ function zoomical() {
 		url[i]=$(echo "${line}" | egrep -o 'https?://[^ <$;]+' | sed 's|[[:blank:]]||g' | head -n1)
 	    elif [[ $(echo "${line}" | grep urldefense) ]]; then # processed 
 		# Using the URL provided by URLDefense
-		url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
+		# url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
+		url[i]=$(echo "${line}" | egrep -o "__https://[[:alnum:]\.?/=]*" | sed 's/__//' | head -n1)
 	    else
 		# A normal meeting URL
 		url[i]=$(echo "${line}" | egrep -o 'https?://[^ ()<$;]+' | sed 's|[[:blank:]]||g')

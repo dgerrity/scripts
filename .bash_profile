@@ -241,9 +241,9 @@ function share_screen() {
     [[ ! $(scutil -r "${target}") ]] && echo "Cannot reach ${target}." && return 1
     line=$(ps aux | grep ".*ssh.*-L.*localhost:5900.*${target}" | grep -v grep)
     if [[ "${line}" ]]; then
-	local port=$(echo "${line}" | sed -e 's/.*-L//' -e 's/:.*$//')
+	local port=$(echo "${line}" | sed -e 's/.*-L//' -e 's/:.*$//' -e 's/[[:blank:]]//g')
 	echo "Tunnel already open on port ${port}"
-	open vnc://localhost:${port}
+	open "vnc://localhost:${port}"
 	return 0;
     fi
     echo "Starting screen sharing with ${target}"
@@ -256,7 +256,7 @@ function share_screen() {
     [[ ${o_auto} ]] && autossh -M ${monport} -f -NL ${ssport}:localhost:5900 "${target}" || \
 	ssh -f -NL ${ssport}:localhost:5900 "${target}"
     sleep 1
-    open vnc://localhost:${ssport}
+    open "vnc://localhost:${ssport}"
 }
 
 function 1pass() {

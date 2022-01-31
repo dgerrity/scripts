@@ -7,6 +7,7 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.14 20220131 Dry run
 # 1.13 20211203 Maybe fixed webex using egrep instead of sed.
 # 1.12 20210817 Added -c to copy zoom information to the clipboard
 # 1.11 20210728 Added parsing for zoom meetings sent from google calendars
@@ -26,7 +27,8 @@
 # 1.0  20200610 initial release
 ###############################################################################
 
-base_url="${ZOOM_DOMAIN:-zoom.us}" # set to base URL for a zoom meeting
+base_url="${ZOOM_DOMAIN:-zoom.us}"    # set to base URL for a zoom meeting
+app_name="${ZOOM_APP_NAME:-Zoom.us}"  # set to name of the application to be launched
 me=$(basename "$0")
 version="1.10"
 
@@ -55,7 +57,6 @@ function vechonr() { [[ ${o_verbose} ]] && echo -en "$@";            }
 function decho()   { [[ ${o_debug}   ]] && echo "$@";                }
 function don()     { [[ ${o_debug}   ]] && set -x;                   }
 function doff()    { [[ ${o_debug}   ]] && set +x;                   }
-function dopen()   { [[ ${o_debug}   ]] && echo "|$*|" || open $*;   }
 
 function usage() {
 #   Displays usage information
@@ -73,6 +74,7 @@ function usage() {
     echo "  -p           prompt me before joining even if there is only one event"
     echo "  -m minutes   go forward in time when checking events (5 minutes without this option)"
     echo "  -n           start a new zoom meeting and copy to clipboard (uses ZOOM_ME in environment)"
+    echo "  -r           dry run, do not launch"
     echo "  -u base-url  override the default domain name of ${base_url} (or set ZOOM_DOMAIN in environment)"
     echo "  -w name      join with name and copy to clipboard.  Uses the environment to join a call (ZOOM_NAME)"
     echo
@@ -81,13 +83,18 @@ function usage() {
     exit 1
 }
 
+function dopen() {
+    [[ ${o_dry_run} ]] && echo "$*" | sed -e 's/-a //' && return
+    [[ ${o_debug}   ]] && echo "|$*|" || open $*;
+}
+
 function launchmtg() {
 #   Takes a URI and launches the meeting, preferring to launch zoom directly if the URI is of the .../j/... form.
 #   Launching direct URIs of the form .../my/... is not supported, so it defaults to using the https: handler
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     if [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/j\+/[^ \"]*") ]]; then
 	zoommtg="$(echo "${1}" | sed 's/^https/zoommtg/;s|/j/|/join?action=join\&confno=|;s/?pwd=/\&pwd=/')"
-	dopen -a Zoom.us ${zoommtg}
+	dopen -a ${app_name} ${zoommtg}
     elif [[ $(echo "${1}" | grep "https://[[:alnum:]]*\.\?") ]]; then
 	dopen "${1}"
     else
@@ -240,8 +247,8 @@ function mainprog() {
 # Options - process command line options
 ##############################################################################
 
-unset o_debug o_include o_minutes o_prompt o_verbose o_with
-while getopts ":dhcim:n:pn:vw:" option; do
+unset o_debug o_dry_run o_include o_minutes o_prompt o_verbose o_with 
+while getopts ":dhcim:n:pn:rvw:" option; do
     case ${option} in
         d) o_debug=true; o_verbose=true;;
         h) usage;;
@@ -252,6 +259,7 @@ while getopts ":dhcim:n:pn:vw:" option; do
            [[ ! $(echo "${o_minutes}" | grep "^[-+].*") ]] && o_minutes="+${o_minutes}";;
         n) o_with="ME";;
         p) o_prompt=true;;
+	r) o_dry_run=true;;
         u) base_url=$(echo "${OPTARG}" | tr "[:upper:]" "[:lower:]");;
         v) o_verbose=true;;
         w) o_with=$(echo "${OPTARG}" | tr "[:lower:]" "[:upper:]");;

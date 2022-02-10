@@ -7,6 +7,7 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.13 20220117 Dashes, underscores allowed in URLs
 # 1.12 20210817 Added -c to copy zoom information to the clipboard
 # 1.11 20210728 Added parsing for zoom meetings sent from google calendars
 # 1.10 20210517 Fixed typo in environment variable name, now backward compatible with bash 3
@@ -84,10 +85,10 @@ function launchmtg() {
 #   Takes a URI and launches the meeting, preferring to launch zoom directly if the URI is of the .../j/... form.
 #   Launching direct URIs of the form .../my/... is not supported, so it defaults to using the https: handler
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
-    if [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/j\+/[^ \"]*") ]]; then
+    if [[ $(echo "${1}" | grep -o "https://[[:alnum:]\._-]*\.\?${base_url}/j\+/[^ \"]*") ]]; then
 	zoommtg="$(echo "${1}" | sed 's/^https/zoommtg/;s|/j/|/join?action=join\&confno=|;s/?pwd=/\&pwd=/')"
 	dopen -a Zoom.us ${zoommtg}
-    elif [[ $(echo "${1}" | grep "https://[[:alnum:]]*\.\?") ]]; then
+    elif [[ $(echo "${1}" | grep "https://[[:alnum:]\._-]*\.\?") ]]; then
 	dopen "${1}"
     else
 	echo "Not a valid web conference meeting - skipping" && return 4
@@ -99,11 +100,11 @@ function validConferencingURL() {
 #   Unfortunately, calendar entries often include multiple URLs, including URLs for getting help or local phone numbers    
 #   These definitions are not foolproof and could use some help.
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
-    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?${base_url}/.\+/[^ \"]*") ]]   && return   # zoom
-    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?webex.com/[^ \"]*") ]]         && return   # webex
-    [[ $(echo "${1}" | grep -o "https://bluejeans.com/[[:alnum:]]*/[[:alnum:]]*") ]]   && return   # bluejeans
-    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?doxy.me") ]]                   && return   # doxy me
-    [[ $(echo "${1}" | grep -o "https://[[:alnum:]]*\.\?arm.com/[[:alnum:]]*") ]]      && return   # arm
+    [[ $(echo "${1}" | grep -o "https://[[:alnum:]\.-_]*\.\?${base_url}/.\+/[^ \"]*") ]]   && return   # zoom
+    [[ $(echo "${1}" | grep -o "https://[[:alnum:]\.-_]*\.\?webex.com/[^ \"]*") ]]         && return   # webex
+    [[ $(echo "${1}" | grep -o "https://bluejeans.com/[[:alnum:]\._-]*/[[:alnum:]]*") ]]   && return   # bluejeans
+    [[ $(echo "${1}" | grep -o "https://[[:alnum:]\.-_]*\.\?doxy.me") ]]                   && return   # doxy me
+    [[ $(echo "${1}" | grep -o "https://[[:alnum:]\.-_]*\.\?arm.com/[[:alnum:]]*") ]]      && return   # arm
     false
 }
 
@@ -239,7 +240,7 @@ function mainprog() {
 ##############################################################################
 
 unset o_debug o_include o_minutes o_prompt o_verbose o_with
-while getopts ":dhcimn:pn:vw:" option; do
+while getopts ":dhcim:n:pn:vw:" option; do
     case ${option} in
         d) o_debug=true; o_verbose=true;;
         h) usage;;

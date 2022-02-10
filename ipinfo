@@ -249,16 +249,18 @@ function mainprog() {
     # 	printl proxyifer: active || printl proxyfier: inactive
 
 #   Get public IP address
+    decho "Getting public IP address"
     str="unavailable"
 #    if ! host -t A checkip.amazonaws.com > /dev/null; then str="cannot-find";
 #    elif ! ping -c2 -t5 google.com &> /dev/null; then str="cannot-ping";
 #    elif nc -z checkip.amazonaws.com 80 2>&1 | grep succeeded > /dev/null; then
 #    str=$(dig +short myip.opendns.com @resolver1.opendns.com)
-    str=$(curl -s checkip.amazonaws.com)
+    str=$(curl -s checkip.amazonaws.com --connect-timeout 3)
 	[[ ${str} ]] && \
 	    str=$(echo ${str} | sed 's/.*s: \([0-9\.]*\)<.*/\1/') || \
 	    str="error"
 #    fi
+    decho "Digging for reverse DNS name dig -x ${str} +short"
     rDNS=$(dig -x ${str} +short)
     printl public: ${str} ${rDNS}
     if ! showMACAddresses; then

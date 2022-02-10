@@ -1200,8 +1200,9 @@ if [[ "${this_shell,,}" == "bash" ]]; then
 	[[ -f "${bp}/etc/bash_completion" ]] && source "${bp}/etc/bash_completion"
 
 	# Bash completion for oci
-	vername="$(\ls ${bp}/Cellar/oci-cli/)"
-	oci_complete="${bp}/Cellar/oci-cli/${vername}/libexec/lib/python3.9/site-packages/oci_cli/bin/oci_autocomplete.sh"
+	vername="$(\ls -Tr ${bp}/Cellar/oci-cli/)"
+	pyver="$(\ls -Tr ${bp}/Cellar/oci-cli/${vername}/libexec/lib/)"
+	oci_complete="${bp}/Cellar/oci-cli/${vername}/libexec/lib/${pyver}/site-packages/oci_cli/bin/oci_autocomplete.sh"
 	[[ -e "${oci_complete}" ]] && source "${oci_complete}"
     fi
     if [[ $(/usr/bin/which op 2>/dev/null) ]]; then

@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-###############################################################################
-#
-# ovpn - a bash script to join the Oracle VPN using credentials stored in
+################################################################################ ovpn - a bash script to join the Oracle VPN using credentials stored in
 #        an online vault (like OCI Vault)
 #
 # version history:
-# 2.0 2021-06 Changed format of the json stored in vault
+# 2.1 2021-10-31 Added -w to update the json 
+# 2.0 2021-06-15 Changed format of the json stored in vault
 # 1.2 2021-03-18 Added generation of instructions
 # 1.1 2021-03-12 Added Vault
 # 1.0 2021-03-06 Initial release
@@ -78,6 +77,7 @@ function usage() {
     echo -e "  -l [label]   use the specified label to locate the correct tuple (endpoint, username, password)"
     echo -e "  -p [pwd]     override the password"
     echo -e "  -u [uname]   override the username"
+    echo -e "  -w           write the password (change the password for the specified label)"
     echo -e "  -x [file]    override the default location of the cisco anyconnect vpn executable (default ${o_exec})"
     echo -e " "
     exit "${1:=1}"
@@ -120,6 +120,27 @@ OCIIsWorking() {
     [[ "${json}" ]]
 }
 
+writeUpdatedPasswordToOCI() {
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    vecho "Going to update the password to ${o_password} for ${o_label}."
+    newjson=$(echo "${1}" | LABEL="${o_label}" NEWPW="${o_password}" \
+        jq -r '(.connections[] | select(.label == env.LABEL) | .password) |= env.NEWPW')
+    [[ ${o_debug} ]] && echo "${newjson}" | jq
+    
+    echo "Update your secret with the following JSON:"
+    echo "${newjson}" | jq
+
+    return
+
+    # Later we can do this
+    if rc="$(oci vault secret update --secret-id ${o_ocid} --secret-content ${newjson})"; then
+	decho "update returned: ${rc}"
+	echo "Password successfully updated for ${o_label}"
+    else
+	echo "Something when wrong when updating password (${rc})"
+    fi
+}
+
 getCredentialsFromOCI() {
     # Get the json blob frm the vault and report an error if there is a problem
     # Determine if we have specified a label. If not, read it with jq .default
@@ -137,7 +158,13 @@ getCredentialsFromOCI() {
 	elif [[ ! "${vers}" -eq 2 ]]; then
 	    echo "Unexpected secret version \"${version}\"" && exit 23
 	fi
-[[ ! ${o_label} ]] && o_label="$(echo "${json}" | jq '.default')"
+	[[ ! ${o_label} ]] && o_label="$(echo "${json}" | jq '.default')"
+
+	if [[ ${o_write} ]]; then
+	    writeUpdatedPasswordToOCI "${json}"
+	    exit 0
+	fi
+
 	json="$(echo "${json}" | LABEL=${o_label} jq -r '.connections[] | select(.label == env.LABEL)')"
 	[[ ! "${json}" ]] && echo "Could not find label \"${o_label}\" in secret." && exit 24
 	[[ ! "${o_endpoint}" ]] && o_endpoint="$(echo "${json}" | jq -r '.endpoint')"
@@ -251,6 +278,11 @@ main() {
 		echo "  client: Running"
 		echo "endpoint: $(dig +short -x "$("${o_exec}" stats | grep "Server Address" | awk '{print $3}')")"
 	    fi;;
+	update)
+	    vecho "Processing write request using new password ${o_password}"
+	    check_method "$@"
+	    check_exec "$@"
+	    getCredentialsFromOCI "$@";;
         *)  [[ "${1}" ]] && echo "Invalid command \"${1}\" provided"
             usage 2;;
     esac
@@ -261,9 +293,9 @@ main() {
 ##############################################################################
 
 # set o_config o_exec o_label o_method
-unset o_debug o_endpoint o_password o_username o_verbose o_instructions
+unset o_debug o_endpoint o_password o_username o_write o_verbose o_instructions
 
-while getopts ":dhv1e:il:o:p:u:x:" option; do
+while getopts ":dhv1e:il:o:p:u:wx:" option; do
     case ${option} in
         d) o_debug=true; o_verbose=true;;
         h) usage 0;;
@@ -275,6 +307,7 @@ while getopts ":dhv1e:il:o:p:u:x:" option; do
         o) o_ocid=${OPTARG};;
         p) o_password=${OPTARG};;
         u) o_username=${OPTARG};;
+	w) o_write=true;;
         x) o_exec=${OPTARG};;
         :) echo "Required argument to -${OPTARG} not specified."
            exit 1;;
@@ -283,10 +316,10 @@ while getopts ":dhv1e:il:o:p:u:x:" option; do
     esac
 done
 
-o_cmd="${!OPTIND:-connect}"
+[[ ${o_write} ]] && o_cmd="update" || o_cmd="${!OPTIND:-connect}"
 
 [[ ${o_debug} ]] && for i in o_debug o_verbose o_cmd o_endpoint o_exec o_ocid o_method o_password o_username \
-                                     o_label o_username o_url o_instructions BASH_VERSION SHELL; do
+                                     o_label o_username o_url o_write o_instructions BASH_VERSION SHELL; do
     decho "${i}=\"${!i}\" "
 done
 decho

@@ -136,7 +136,8 @@ function zoomical() {
 	    elif [[ $(echo "${line}" | grep urldefense) ]]; then # processed 
 		# Using the URL provided by URLDefense
 		# url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
-		url[i]=$(echo "${line}" | egrep -o "__https://[[:alnum:]\.?/=]*" | sed 's/__//' | head -n1)
+		#url[i]=$(echo "${line}" | egrep -o "__https://[[:alnum:]\.?/=]*" | sed 's/__//' | head -n1)
+		url[i]=$(echo "${line}" | egrep -o "__https:/*[[:alnum:]\.?/=_;\!]*" | sed -e 's/__//' -e 's/>//g' -e ''s/;!!/?pwd=' | head -n1)
 	    else
 		# A normal meeting URL
 		url[i]=$(echo "${line}" | egrep -o 'https?://[^ ()<$;]+' | sed 's|[[:blank:]]||g')

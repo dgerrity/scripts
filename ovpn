@@ -3,6 +3,7 @@
 #        an online vault (like OCI Vault)
 #
 # version history:
+# 2.2 2022-02-25 Finished -w to update json, added the command dump to just see the secret in json form.
 # 2.1 2021-10-31 Added -w to update the json 
 # 2.0 2021-06-15 Changed format of the json stored in vault
 # 1.2 2021-03-18 Added generation of instructions
@@ -123,26 +124,43 @@ OCIIsWorking() {
 writeUpdatedPasswordToOCI() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     vecho "Going to update the password to ${o_password} for ${o_label}."
+
     newjson=$(echo "${1}" | LABEL="${o_label}" NEWPW="${o_password}" \
         jq -r '(.connections[] | select(.label == env.LABEL) | .password) |= env.NEWPW')
     [[ ${o_debug} ]] && echo "${newjson}" | jq
     
-    echo "Update your secret with the following JSON:"
-    echo "${newjson}" | jq
-
-    return
-
     # Later we can do this
-    if rc="$(oci vault secret update --secret-id ${o_ocid} --secret-content ${newjson})"; then
-	decho "update returned: ${rc}"
-	echo "Password successfully updated for ${o_label}"
+    
+    b64="$(echo ${newjson} | base64)"
+    [[ ! ${b64} ]] && echo "Could not convert json to base64" && exit 31
+    if rc="$(oci vault secret update-base64 --secret-id ${o_ocid} --secret-content-content ${b64})"; then
+	decho "update returned:"; decho "${rc}"
+	secretversion="$(echo ${rc} | jq '.data."current-version-number"')"
+	echo "Password successfully updated for ${o_label}, current secret version is now ${secretversion}"
     else
 	echo "Something when wrong when updating password (${rc})"
     fi
 }
 
+dumpCredentialsFromOCI() {
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    if bundle="$(oci secrets secret-bundle get --secret-id "${o_ocid}" 2> /dev/null)"; then
+        json="$(echo "${bundle}" | jq -r '.data."secret-bundle-content".content' 2>/dev/null | base64 -d)"
+	[[ ${#json} -lt 50 ]] && echo "Unexpected secret format ${bundle}." && exit 22
+	vers="$(echo "${json}" | jq -r '.version')"
+	if [[ "${vers}" == "null" ]]; then
+	    echo "Invalid secret version - have you updated your format to version 2?" && exit 23
+	elif [[ ! "${vers}" -eq 2 ]]; then
+	    echo "Unexpected secret version \"${version}\"" && exit 23
+	fi
+	echo "${json}" | jq
+    else
+	echo "Could not retrieve secret bundle from vault: ${bundle}" && exit 21
+    fi
+}
+
 getCredentialsFromOCI() {
-    # Get the json blob frm the vault and report an error if there is a problem
+    # Get the json blob form the vault and report an error if there is a problem
     # Determine if we have specified a label. If not, read it with jq .default
     # Select the endpoint using .connections[] | select(.label == ${label})
     # get the endpoint (-r .endpoint), the username (-r .username)
@@ -283,6 +301,13 @@ main() {
 	    check_method "$@"
 	    check_exec "$@"
 	    getCredentialsFromOCI "$@";;
+
+	dump)
+	    vecho "Getting current secret"
+	    check_method "$@"
+	    check_exec "$@"
+	    dumpCredentialsFromOCI "$@";;
+	
         *)  [[ "${1}" ]] && echo "Invalid command \"${1}\" provided"
             usage 2;;
     esac

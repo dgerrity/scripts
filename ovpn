@@ -66,7 +66,7 @@ function usage() {
     echo -e "${me} establishes or disconnects from the VPN using secrets stored in OCI Vault."
     echo -e "Usage: ${me} [options] cmd"
     echo -e " "
-    echo -e "Commands: ${_b_}on | off | status${_p_}"
+    echo -e "Commands: ${_b_}connect | disconnect | restart | dump | update${_p}"
     echo -e " "
     echo -e "Options"
     echo -e "  -d           debug"
@@ -262,6 +262,8 @@ write_instructions() {
     echo "3. Copy the ocid of the secret into your environment as OCI_VPN_KEY"
     echo "   (currently \"${OCI_VPN_KEY}\").  Use -k key to override this."
     echo "4. See the script ${0} for the JSON format to put into the secret."
+    echo "5. If your tenancy has more than one user, set a policy to restrict reading and updating the secret"
+    echo "   to you only."
 }
 
 main() {
@@ -296,18 +298,24 @@ main() {
 		echo "  client: Running"
 		echo "endpoint: $(dig +short -x "$("${o_exec}" stats | grep "Server Address" | awk '{print $3}')")"
 	    fi;;
-	update)
-	    vecho "Processing write request using new password ${o_password}"
-	    check_method "$@"
-	    check_exec "$@"
-	    getCredentialsFromOCI "$@";;
 
+	restart | reset)
+	    vecho "Resetting"
+	    main "disconnect"
+	    main "connect";;
+	    
 	dump)
 	    vecho "Getting current secret"
 	    check_method "$@"
 	    check_exec "$@"
 	    dumpCredentialsFromOCI "$@";;
 	
+	update)
+	    vecho "Processing write request using new password ${o_password}"
+	    check_method "$@"
+	    check_exec "$@"
+	    getCredentialsFromOCI "$@";;
+
         *)  [[ "${1}" ]] && echo "Invalid command \"${1}\" provided"
             usage 2;;
     esac

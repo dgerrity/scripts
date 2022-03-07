@@ -137,7 +137,7 @@ function zoomical() {
 		# Using the URL provided by URLDefense
 		# url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
 		#url[i]=$(echo "${line}" | egrep -o "__https://[[:alnum:]\.?/=]*" | sed 's/__//' | head -n1)
-		url[i]=$(echo "${line}" | egrep -o "__https:/*[[:alnum:]\.?/=_;\!]*" | sed -e 's/__//' -e 's/>//g' -e ''s/;!!/?pwd=' | head -n1)
+		url[i]=$(echo "${line}" | egrep -o "__https:/*[[:alnum:]\.?/=_;\!]*" | sed -e 's/__//' -e 's/>//g' -e 's/;!!/?pwd=' | head -n1)
 	    else
 		# A normal meeting URL
 		url[i]=$(echo "${line}" | egrep -o 'https?://[^ ()<$;]+' | sed 's|[[:blank:]]||g')
@@ -187,7 +187,7 @@ function zoomical() {
             echo "$(( i+1 )) Join ${topic[i]}; ${block[i]}"
         done    
         read -rp "Join which meeting? [cancel] " response
-	response=$(echo "${response}" | tr [:upper:] [:lower:])
+	response=$(echo "${response}" | tr "[:upper:]" "[:lower:]")
         [[ (! "${response}") || ("${response}" == "cancel") ]] && return 1
         [[ $(echo "${response}" | sed 's/[0-9]*//g') ]] && echo "Invalid response - skipping" && return 2
         [[ (${response} -gt ${n}) || (${response} -lt 1) ]] && echo "Invalid meeting number - skipping" && return 3
@@ -249,7 +249,7 @@ function mainprog() {
 # Options - process command line options
 ##############################################################################
 
-unset o_debug o_dry_run o_include o_minutes o_prompt o_verbose o_with 
+unset "o_debug" "o_dry_run" "o_include" "o_minutes" "o_prompt" "o_verbose" "o_with" 
 while getopts ":dhcim:n:pn:rvw:" option; do
     case ${option} in
         d) o_debug=true; o_verbose=true;;

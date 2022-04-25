@@ -7,6 +7,7 @@
 # Requires icalBuddy: `$ brew install ical-buddy` (which itself requires brew)
 #
 # Change history:
+# 1.16 20220318 Added -t to test a URL
 # 1.15 20220131 Dry run
 # 1.14 20220117 Dashes, underscores allowed in URLs
 # 1.13 20211203 Maybe fixed webex using egrep instead of sed.
@@ -76,6 +77,7 @@ function usage() {
     echo "  -m minutes   go forward in time when checking events (5 minutes without this option)"
     echo "  -n           start a new zoom meeting and copy to clipboard (uses ZOOM_ME in environment)"
     echo "  -r           dry run, do not launch"
+    echo "  -t string    process the string to extract the meeting url"
     echo "  -u base-url  override the default domain name of ${base_url} (or set ZOOM_DOMAIN in environment)"
     echo "  -w name      join with name and copy to clipboard.  Uses the environment to join a call (ZOOM_NAME)"
     echo
@@ -135,8 +137,7 @@ function zoomical() {
 		url[i]=$(echo "${line}" | egrep -o 'https?://[^ <$;]+' | sed 's|[[:blank:]]||g' | head -n1)
 	    elif [[ $(echo "${line}" | grep urldefense) ]]; then # processed 
 		# Using the URL provided by URLDefense
-		# url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
-		url[i]=$(echo "${line}" | egrep -o "__https://[[:alnum:]\.?/=]*" | sed 's/__//' | head -n1)
+		url[i]=$(echo "${line}" | egrep -o "__https:/*[[:alnum:]\.?/=_;\!]*" | sed -e 's/__//g' -e 's/>//g' -e 's/;!!/?pwd=/' | head -n1)
 	    else
 		# A normal meeting URL
 		url[i]=$(echo "${line}" | egrep -o 'https?://[^ ()<$;]+' | sed 's|[[:blank:]]||g')
@@ -186,13 +187,36 @@ function zoomical() {
             echo "$(( i+1 )) Join ${topic[i]}; ${block[i]}"
         done    
         read -rp "Join which meeting? [cancel] " response
-	response=$(echo "${response}" | tr [:upper:] [:lower:])
+	response=$(echo "${response}" | tr "[:upper:]" "[:lower:]")
         [[ (! "${response}") || ("${response}" == "cancel") ]] && return 1
         [[ $(echo "${response}" | sed 's/[0-9]*//g') ]] && echo "Invalid response - skipping" && return 2
         [[ (${response} -gt ${n}) || (${response} -lt 1) ]] && echo "Invalid meeting number - skipping" && return 3
         [[ ! ${url[ (( --response )) ]} ]] && echo "Not a valid web conference meeting - skipping" && return 4
         echo "Joining ${topic[response]}..."
         launchmtg "${url[response]}"
+    fi
+}
+
+function tryURL() {
+#   Tests out a URL to see if it's valid and, if not, says why.
+    enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
+    local url
+    if validConferencingURL "${o_test}"; then
+	vecho "The specified URL is valid"
+        decho "Extracting URL from |${o_test}|"
+	if [[ $(echo "${o_test}" | egrep "https.* <https.*>") ]]; then
+	    echo "Testing for a Google Calendar URL"
+	    url=$(echo "${o_test}" | egrep -o 'https?://[^ <$;]+' | sed 's|[[:blank:]]||g' | head -n1)
+	elif [[ $(echo "${o_test}" | grep urldefense) ]]; then # processed 
+	    echo "Looking for a URLDefense URL"
+	    url=$(echo "${o_test}" | egrep -o "__https:/*[[:alnum:]\.?/=_;\!]*" | sed -e 's/__//g' -e 's/>//g' -e 's/;!!/?pwd=/' | head -n1)
+	else
+	    echo "Looking for a normal URL"
+	    url=$(echo "${o_test}" | egrep -o 'https?://[^ ()<$;]+' | sed 's|[[:blank:]]||g')
+	fi
+        echo "Resulting URL is |${url}|"
+    else
+	"The specified URL (${o_test}) is not recognized as valid."
     fi
 }
 
@@ -237,7 +261,9 @@ function mainprog() {
     offsetMins=$(date -v"${offset}M" "+%Y-%m-%d %H:%M:%S %z")
     [[ ${o_include} ]] && includeType= || includeType="-ict ${default_include_types}"
 
-    if [[ ${o_with} ]]; then
+    if [[ ${o_test} ]]; then
+	tryURL "$@"
+    elif [[ ${o_with} ]]; then
         zoomwith "$@"
     else
         zoomical "$@"
@@ -248,8 +274,8 @@ function mainprog() {
 # Options - process command line options
 ##############################################################################
 
-unset o_debug o_dry_run o_include o_minutes o_prompt o_verbose o_with 
-while getopts ":dhcim:n:pn:rvw:" option; do
+unset "o_debug" "o_dry_run" "o_include" "o_minutes" "o_prompt" "o_test" "o_verbose" "o_with" 
+while getopts ":dhcim:n:pn:rt:vw:" option; do
     case ${option} in
         d) o_debug=true; o_verbose=true;;
         h) usage;;
@@ -261,6 +287,7 @@ while getopts ":dhcim:n:pn:rvw:" option; do
         n) o_with="ME";;
         p) o_prompt=true;;
 	r) o_dry_run=true;;
+	t) o_verbose=true; o_test=$(echo "${OPTARG}" | tr "[:upper:]" "[:lower:]");;
         u) base_url=$(echo "${OPTARG}" | tr "[:upper:]" "[:lower:]");;
         v) o_verbose=true;;
         w) o_with=$(echo "${OPTARG}" | tr "[:lower:]" "[:upper:]");;

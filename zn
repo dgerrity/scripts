@@ -97,7 +97,7 @@ function launchmtg() {
     enter "${FUNCNAME[0]}" "${LINENO[0]}" "$@"
     if [[ $(echo "${1}" | grep -o "https://[[:alnum:]\._-]*\.\?${base_url}/j\+/[^ \"]*") ]]; then
 	zoommtg="$(echo "${1}" | sed 's/^https/zoommtg/;s|/j/|/join?action=join\&confno=|;s/?pwd=/\&pwd=/')"
-	dopen -a Zoom.us ${zoommtg}
+	dopen -a ${app_name} ${zoommtg}
     elif [[ $(echo "${1}" | grep "https://[[:alnum:]\._-]*\.\?") ]]; then
 	dopen "${1}"
     else
@@ -137,8 +137,6 @@ function zoomical() {
 		url[i]=$(echo "${line}" | egrep -o 'https?://[^ <$;]+' | sed 's|[[:blank:]]||g' | head -n1)
 	    elif [[ $(echo "${line}" | grep urldefense) ]]; then # processed 
 		# Using the URL provided by URLDefense
-		# url[i]=$(echo "${line}" | sed 's/.*__\(.*\)__.*/\1/g')
-		#url[i]=$(echo "${line}" | egrep -o "__https://[[:alnum:]\.?/=]*" | sed 's/__//' | head -n1)
 		url[i]=$(echo "${line}" | egrep -o "__https:/*[[:alnum:]\.?/=_;\!]*" | sed -e 's/__//g' -e 's/>//g' -e 's/;!!/?pwd=/' | head -n1)
 	    else
 		# A normal meeting URL

@@ -265,14 +265,14 @@ function 1pass() {
 
 function opget() {
 #   Options are [[vpn | sso] [[username | password]]].  Default is vpn password
-    eval $(op signin --session "${OP_SESSION_gerrity_benditt}") # prompts for password if invalid, otherwise updates env
+    eval $(op signin --session "${OP_SESSION_YES65ZLIBJA6JN4CNW7YZ77GSI}") # prompts for password if invalid, otherwise updates env
     opkey="${OP_VPN_KEY}"
     [[ ! "${2}" ]] && field=password || field="${2}"
     [[ "${1,}" == "sso" ]] && opkey="${OP_SSO_KEY}"
     case "${field}" in
-	username) op get item "${opkey}" --fields username | pbcopy;;
-	password) op get item "${opkey}" --fields password | pbcopy;;
-	endpoint) op get item "${opkey}" | \
+	username) op item get "${opkey}" --fields username | pbcopy;;
+	password) op item get "${opkey}" --fields password | pbcopy;;
+	endpoint) op item get "${opkey}" | \
 			jq '.overview.URLs[] | select(.u | contains("twv")).u' | sed 's/\"//g' | sed 's/https://' | pbcopy;;
 	*) echo "Nothing to get";;
     esac
@@ -281,15 +281,15 @@ function opget() {
 
 function opgetvpn() {
     [[ ! "${1}" ]] && target="qqabh3n7h5ehnjlrujj4fz5oq4" || target="$*"
-    eval $(op signin --session "${OP_SESSION_gerrity_benditt}") # prompts for password if invalid, otherwise updates env
-    op get item "${target}" | jq '.overview.URLs[] | select(.u | contains("twv")).u' | sed 's/\"//g' | pbcopy
+   eval $(op signin --session "${OP_SESSION_YES65ZLIBJA6JN4CNW7YZ77GSI}") # prompts for password if invalid, otherwise updates env
+    op item get "${target}" | jq '.overview.URLs[] | select(.u | contains("twv")).u' | sed 's/\"//g' | pbcopy
     echo "Copied to clipboard"
 }
 
 function opgetany() {
     [[ ! "${1}" ]] && target="qqabh3n7h5ehnjlrujj4fz5oq4" || target="$*"
-    eval $(op signin --session "${OP_SESSION_gerrity_benditt}") # prompts for password if invalid, otherwise updates env
-    op get item "${target}" --fields password | pbcopy
+    eval $(op signin --session "${OP_SESSION_YES65ZLIBJA6JN4CNW7YZ77GSI}") # prompts for password if invalid, otherwise updates env
+    op item get "${target}" --fields password | pbcopy
     echo "Copied to clipboard"
 }
 

@@ -174,7 +174,7 @@ function tell() {
     str="${quote}tell app \"${1}\" to"
     shift
     [[ "${1}" == "to" ]] && shift
-    for i in "${@}"; do
+    for i in ${@}; do
 	i_no_space="$(echo ${i} | sed 's/ //g')"
 	[[ ${#i} -ne ${#i_no_space} ]] && p="\"${i}\"" || p="${i}"
 	str="${str} ${p}"
@@ -704,7 +704,7 @@ function find-python-lib() {
 }
 
 function sendcloud() {
-    swaks -s "${SMTP_SERVER}:587" -tls -au "${SMTP_USERNAME}" -ap "${SMTP_PASSWORD}" -f  "dgerrity-mac@gerrity.org" "$@"
+    swaks -s "${SMTP_SERVER}:587" -tls -au "${SMTP_USERNAME}" -ap "${SMTP_PASSWORD}" -f  "dg-mac@gerrity.org" "$@"
 }
 
 function slack() {
@@ -779,12 +779,10 @@ function _rcslog() {
 }
 
 function rcsmv() {
-set -x
     mv "${1}" "${2}"
     mv "RCS/${1}-v" "RCS/${2}-v"
     mv "RCS/logs/${1}.log" "RCS/logs/${2}.log"
     _rcslog renamed "${2}"
-set +x
 }
 
 function ci()      { /usr/bin/ci -u -d "$@"; _rcslog "checked-in" "$@";     }
@@ -1011,7 +1009,7 @@ function symlink() {
 }
 
 function edit() {
-    for i in "$@"; do
+    for i in $@; do
 	if [[ ! -e "${i}" ]]; then
 	    read -p "Create new file ${i}? [y] " ans
 	    [[ (! ${ans}) || (${ans} == y) ]] && continue || return
@@ -1037,7 +1035,6 @@ bgcGrey=47; bgcNone=49
 fgc=${fgcBlack}; bgc=${bgcNone}; bold=";1"
 case $(hostname -s) in
     papamini)      fgc=${fgcYellow};;
-    dgerrity-mac)  fgc=${fgcGrey};;
     risc)          fgc=${fgcBlue};;
     rose)          fgc=${fgcRed};;
     dg-mac)        fgc=${fgcGreen};;
@@ -1055,20 +1052,18 @@ if [[ (${SSH_CLIENT}) && (${SSH_CALLER} == $(hostname -s)) ]]; then
 fi
 
 thishost="$(hostname -s | sed 's/[- ]/_/g')"
-virtualhosts="" #oscar mike kilo zulu uniform
+virtualhosts=""
 localhosts="${thishost} ${virtualhosts}"
-homehosts="moira zulu papamini arm mint workmint"
-remotehosts="" #whiskey bfvana cottage garage hoopyfrood kkc kritzman"
+homehosts="rose risc papamini"
+remotehosts="papamini papax router" 
 sshhosts="${virtualhosts} ${localhosts} ${homehosts} ${remotehosts}"
-[[ -e ~/.ssh/config ]] && sshhosts="${sshhosts} $(cat ~/.ssh/config | grep "\." | grep -v "\*" | awk '{print $2}' | sort | uniq)"
-sshhosts="$(printf "%s\n" ${sshhosts} | grep -v "\." | sort | uniq)"
 dyndnshosts="${homehosts} ${remotehosts}"
-for i in ${dyndnshosts}; do eval export ${i}=\"${i}.dnsdojo.com\"; done
+for i in ${remotehosts}; do eval export ${i}=\"${i}.dnsdojo.com\"; done
 for i in ${localhosts};  do eval export ${i}=\"${i}.local\"; done
 [[ "$(uname)" == Darwin ]] && \
     ip=$(ifconfig -m "${aptdev}" | grep "inet " | cut -f2 -d' ') || \
     ip=$(ifconfig | grep "inet " | cut -f2 -d' ')
-[[ "${ip:0:9}" == "192.168.0" ]] && for i in ${homehosts}; do eval export ${i}=\"${i}.local\"; done
+[[ "${ip:0:9}" == "192.168.4" ]] && for i in ${homehosts}; do eval export ${i}=\"${i}.local\"; done
 
 [[ -r ~/Dropbox/Library/share/dict/altscrab ]] && export DEFAULT_DICT=~/Dropbox/Library/share/dict/altscrab
 [[ -r ~/Library/altscrab ]] && export DEFAULT_DICT=~/Library/altscrab
@@ -1208,7 +1203,6 @@ if [[ "${this_shell,,}" == "bash" ]]; then
     if [[ $(/usr/bin/which op 2>/dev/null) ]]; then
 	source <(op completion bash)
     fi
-
 
     utils="dig dnstrace dnstracer ftp host iperf3 nc nmap nslookup ping scutil ssh traceroute wget"
     unset list; for i in ${dyndnshosts}; do list="${list} ${!i}"; done

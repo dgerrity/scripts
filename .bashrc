@@ -55,8 +55,8 @@ export EDITOR=emacs
 # Default addresses for important machines 
 # for i in romeo sierra cookie tango deltagolf zulu; do export "${i}"="${i}.dnsdojo.com"; done
 case "$(hostname -s)" in
-    zulu)         export daapserver=papamini.dnsdojo.com; export vpndev=utun1;;
-    dgerrity-me)  export proxy=papamini.dnsdojo.com; export proxyport=34345; aptdev=en0;;
+    zulu)   export daapserver=papamini.dnsdojo.com; export vpndev=utun1;;
+    dg-mac) export proxy=papamini.dnsdojo.com; export proxyport=34345; aptdev=en0;;
     *);;
 esac
 

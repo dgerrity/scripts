@@ -1,7 +1,7 @@
 #!/bin/bash
-[[ -e /Users/dan/.bashrc ]] && source /Users/dan/.bashrc
+[[ -e "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc"
 
-bu_volume="Passport TM HD"
+bu_volume="Elements_$(hostname -s)"
 
 if mount | grep "${bu_volume}" ; then
     # Drive is mounted, so: backup and then eject after

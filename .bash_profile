@@ -1030,11 +1030,12 @@ function edit() {
 ###############################################################################
 
 logger -i "$(me) executed by $(ps -p $PPID -o args=), pid $$"
-fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcYello=33; fgcRed=31; fgcGreen=32;
+fgcGrey=37; fgcBlack=30; fgcBlue=34; fgcYellow=33; fgcRed=31; fgcGreen=32;
 bgcGrey=47; bgcNone=49
 fgc=${fgcBlack}; bgc=${bgcNone}; bold=";1"
 case $(hostname -s) in
     papamini)      fgc=${fgcYellow};;
+    studio)        fgc=${fgcRed};;
     risc)          fgc=${fgcBlue};;
     rose)          fgc=${fgcRed};;
     dg-mac)        fgc=${fgcGreen};;

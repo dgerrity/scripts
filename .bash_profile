@@ -1075,6 +1075,9 @@ if [[ -r "${HOME}/Oracle/Oracle Content/Secure/Locker" ]]; then
 elif [[ -r "${HOME}/Oracle Content - Accounts/Oracle Content" ]]; then
     export LOCKER="${HOME}/Oracle Content - Accounts/Oracle Content/Secure/Locker"
     export ORACLE_PREFIX="${HOME}/Oracle Content - Accounts/Oracle Content"
+elif [[ -r "${HOME}/Oracle Content/Secure/Locker" ]]; then
+    export LOCKER="${HOME}/Oracle Content/Secure/Locker"
+    export ORACLE_PREFIX="${HOME}/Oracle Content"
 fi
 [[ -r ~/Dropbox/Documents/Locker ]] && export LOCKER=~/Dropbox/Documents/Locker
 

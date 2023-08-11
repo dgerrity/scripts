@@ -276,7 +276,10 @@ main() {
             else
                 running="$(route -n | grep "^0.0.0.0.*U.*tun")"
             fi
-            if [[ "${running}" ]]; then
+	    if [[ $(echo "${running}" | grep "bad") ]]; then
+		echo "Not able to reach the internet"
+		exit 1
+	    elif [[ "${running}" ]]; then
                 echo "VPN already connected."
                 ${o_exec} -s state | sed 's/>>//' | sed -n 's/\(state:.*\).*/\1/p;/state/q'
                 exit 0

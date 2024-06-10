@@ -4,7 +4,7 @@ items=($@)
 len="${#items[@]}"
 
 # Show arguments for typos
-for (( i=0; i<5; i++ )); do
+for (( i=0; i<${len}/4; i++ )); do
     for (( j=0; j<4; j++ )); do
 	index=$(( i*4+j ))
 	echo -n "${items[index]}"

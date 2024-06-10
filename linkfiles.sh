@@ -52,6 +52,7 @@ linkfile inline
 linkfile ipinfo
 linkfile proxy
 linkfile ovpn
+linkfile quartiles
 linkfile scrab
 linkfile timedns
 linkfile today

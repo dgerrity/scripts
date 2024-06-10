@@ -113,7 +113,7 @@ Uses `current-date-time-format' for the formatting the date/time."
 ;; Use aspell instead of ispell
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(setq ispell-program-name "/usr/local/bin/aspell")
+(setq ispell-program-name "/opt/homebrew/bin/aspell")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AppleScript mode

@@ -1,0 +1,49 @@
+#!/opt/homebrew/bin/bash
+
+items=($@)
+len="${#items[@]}"
+
+# Show arguments for typos
+for (( i=0; i<5; i++ )); do
+    for (( j=0; j<4; j++ )); do
+	index=$(( i*4+j ))
+	echo -n "${items[index]}"
+	[[ $j -lt 3 ]] && echo -n "-"
+    done
+    echo
+done
+echo "=================="
+
+# Generate list of words
+echo > .third.txt
+for (( i=0; i<${len}; i++ )); do
+    for (( j=$i+1; j<${len}; j++ )); do
+	echo "${items[$i]}${items[j]}" >> .third.txt
+	echo "${items[$j]}${items[i]}" >> .third.txt
+        for (( k=$j+1; k<${len}; k++ )); do
+	    echo "${items[$i]}${items[$j]}${items[$k]}" >> .third.txt
+	    echo "${items[$i]}${items[$k]}${items[$j]}" >> .third.txt
+	    echo "${items[$j]}${items[$i]}${items[$k]}" >> .third.txt
+	    echo "${items[$j]}${items[$k]}${items[$i]}" >> .third.txt
+	    echo "${items[$k]}${items[$i]}${items[$j]}" >> .third.txt
+	    echo "${items[$k]}${items[$j]}${items[$i]}" >> .third.txt
+	done
+    done
+done
+
+cat .third.txt | while read word; do
+    [[ ${#word} < 3 ]] && continue
+    if [[ $(grep -x "${word}" /usr/share/dict/web2) ]]; then echo "${word}"
+    elif [[ "${word:${#word}-3:3}" == "ies" ]]; then # bundy found for bundies?
+	[[ $(grep -x "${word:0:${#word}-3}y" /usr/share/dict/web2) ]] && echo "${word}*"
+#    elif [[ "${word:${#word}-2:2}" == "es" ]]; then # singular found without -es?
+#	[[ $(grep -x "${word:0:${#word}-2}" /usr/share/dict/web2) ]] && echo "${word}*"
+    elif [[ "${word:${#word}-1:1}" == "s" ]]; then # singular found without -s?
+	[[ $(grep -x "${word:0:${#word}-1}" /usr/share/dict/web2) ]] && echo "${word}*"
+    elif [[ "${word:${#word}-2:2}" == "ee" ]] then # look for giver givee relationship
+	 [[ $(grep -x "${word:0:${#word}-2}or" /usr/share/dict/web2) ]] && echo "${word}*"
+    fi
+done	 
+
+# rm .third.txt
+

@@ -5,45 +5,65 @@ len="${#items[@]}"
 
 # Show arguments for typos
 for (( i=0; i<${len}/4; i++ )); do
+    big=""
     for (( j=0; j<4; j++ )); do
 	index=$(( i*4+j ))
 	echo -n "${items[index]}"
+	big+="${items[index]}"
 	[[ $j -lt 3 ]] && echo -n "-"
     done
+    [[ ! $(grep -x "${big}" /usr/share/dict/web2) ]] && echo -n " (not found)"
     echo
 done
 echo "=================="
 
 # Generate list of words
-echo > .third.txt
+echo > .quartiles.txt
 for (( i=0; i<${len}; i++ )); do
     for (( j=$i+1; j<${len}; j++ )); do
-	echo "${items[$i]}${items[j]}" >> .third.txt
-	echo "${items[$j]}${items[i]}" >> .third.txt
+	echo "${items[$i]}${items[j]}" >> .quartiles.txt
+	echo "${items[$j]}${items[i]}" >> .quartiles.txt
         for (( k=$j+1; k<${len}; k++ )); do
-	    echo "${items[$i]}${items[$j]}${items[$k]}" >> .third.txt
-	    echo "${items[$i]}${items[$k]}${items[$j]}" >> .third.txt
-	    echo "${items[$j]}${items[$i]}${items[$k]}" >> .third.txt
-	    echo "${items[$j]}${items[$k]}${items[$i]}" >> .third.txt
-	    echo "${items[$k]}${items[$i]}${items[$j]}" >> .third.txt
-	    echo "${items[$k]}${items[$j]}${items[$i]}" >> .third.txt
+	    echo "${items[$i]}${items[$j]}${items[$k]}" >> .quartiles.txt
+	    echo "${items[$i]}${items[$k]}${items[$j]}" >> .quartiles.txt
+	    echo "${items[$j]}${items[$i]}${items[$k]}" >> .quartiles.txt
+	    echo "${items[$j]}${items[$k]}${items[$i]}" >> .quartiles.txt
+	    echo "${items[$k]}${items[$i]}${items[$j]}" >> .quartiles.txt
+	    echo "${items[$k]}${items[$j]}${items[$i]}" >> .quartiles.txt
 	done
     done
 done
 
-cat .third.txt | while read word; do
+echo > .q
+cat .quartiles.txt | while read word; do
     [[ ${#word} < 3 ]] && continue
-    if [[ $(grep -x "${word}" /usr/share/dict/web2) ]]; then echo "${word}"
-    elif [[ "${word:${#word}-3:3}" == "ies" ]]; then # bundy found for bundies?
-	[[ $(grep -x "${word:0:${#word}-3}y" /usr/share/dict/web2) ]] && echo "${word}*"
-#    elif [[ "${word:${#word}-2:2}" == "es" ]]; then # singular found without -es?
-#	[[ $(grep -x "${word:0:${#word}-2}" /usr/share/dict/web2) ]] && echo "${word}*"
-    elif [[ "${word:${#word}-1:1}" == "s" ]]; then # singular found without -s?
+    if [[ $(grep -x "${word}" /usr/share/dict/web2) ]]; then echo "${word}" 
+    elif [[ "${word:${#word}-1:1}" == "s" ]]; then
+	# fund found but not funds
 	[[ $(grep -x "${word:0:${#word}-1}" /usr/share/dict/web2) ]] && echo "${word}*"
-    elif [[ "${word:${#word}-2:2}" == "ee" ]] then # look for giver givee relationship
+    elif [[ "${word:${#word}-3:3}" == "ies" ]]; then
+	# body found but not bodies
+	[[ $(grep -x "${word:0:${#word}-3}y" /usr/share/dict/web2) ]] && echo "${word}*"
+	# money found but not monies
+	[[ $(grep -x "${word:0:${#word}-3}ey" /usr/share/dict/web2) ]] && echo "${word}*"
+    elif [[ "${word:${#word}-3:3}" == "ing" ]]; then
+	# grouse found but not grousing
+	[[ $(grep -x "${word:0:${#word}-3}e" /usr/share/dict/web2) ]] && echo "${word}*"
+	[[ $(grep -x "${word:0:${#word}-3}" /usr/share/dict/web2) ]] && echo "${word}*"
+	 
+    elif [[ "${word:${#word}-2:2}" == "ed" ]]; then
+	# conjure found but not conjured, burp but not burped
+	[[ $(grep -x "${word:0:${#word}-1}" /usr/share/dict/web2) ]] && echo "${word}*"
+	[[ $(grep -x "${word:0:${#word}-2}" /usr/share/dict/web2) ]] && echo "${word}*"
+    elif [[ "${word:${#word}-2:2}" == "ie" ]]; then
+	# boot found but not bootie
+	[[ $(grep -x "${word:0:${#word}-2}" /usr/share/dict/web2) ]] && echo "${word}*"
+    elif [[ "${word:${#word}-2:2}" == "ee" ]] then
+	 # mentor found but not mentee
 	 [[ $(grep -x "${word:0:${#word}-2}or" /usr/share/dict/web2) ]] && echo "${word}*"
     fi
-done	 
+done | tee -a .q
 
-# rm .third.txt
-
+cat .q | sort > .quartiles.txt && rm .q
+echo "----------------------------------"
+cat .quartiles.txt

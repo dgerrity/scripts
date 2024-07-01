@@ -50,6 +50,7 @@ linkfile findprefs
 linkfile hang
 linkfile inline
 linkfile ipinfo
+linkfile lb
 linkfile proxy
 linkfile ovpn
 linkfile quartiles

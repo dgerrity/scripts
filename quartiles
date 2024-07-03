@@ -61,9 +61,12 @@ cat .quartiles.txt | while read word; do
     elif [[ "${word:${#word}-2:2}" == "ee" ]] then
 	 # mentor found but not mentee
 	 [[ $(grep -x "${word:0:${#word}-2}or" /usr/share/dict/web2) ]] && echo "${word}*"
+    elif [[ "${word:${#word}-3:3}" == "ize" ]] then
+	 # penal but not penalize
+	 [[ $(grep -x "${word:0:${#word}-2}or" /usr/share/dict/web2) ]] && echo "${word}*"
     fi
 done | tee -a .q
 
-cat .q | sort > .quartiles.txt && rm .q
+cat .q | sort | uniq > .quartiles.txt && rm .q
 echo "----------------------------------"
-cat .quartiles.txt
+less .quartiles.txt

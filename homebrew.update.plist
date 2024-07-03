@@ -9,7 +9,7 @@
         <string>/opt/homebrew/bin/brew</string>
         <string>update</string>
         <string>&&</string>
-        <string>/usr/local/bin/brew</string>
+        <string>/opt/homebrew/bin/brew</string>
         <string>upgrade</string>
     </array>
     <key>StartCalendarInterval</key>

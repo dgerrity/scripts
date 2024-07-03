@@ -1,29 +1,28 @@
 #!/opt/homebrew/bin/bash
 
-#first=;must="a-z";notlast=; grep -E "^${first}((z|c|h)?(r|u|l)?(a|i|m)?(e|q|o)?)+$" /usr/share/dict/web2 |while read word; do [[ ${#word} -lt 3 ]] && continue; echo ${#word} ${word}; done | grep -v "zz\|zc\|zh\|cz\|cc\|ch\|hz\|hc\|hh\|rr\|ru\|rl\|ur\|uu\|ul\|lr\|lu\|ll\|aa\|ai\|am\|ia\|ii\|im\|ma\|mi\|mm\|oo\|oq\|oe\|qo\|qq\|qe\|eo\|eq\|ee" |grep [${must}] | sort -n
-
-#grep -E '^d((s|e|t)?(l|h|g)?(d|u|i)?(o|b|m)?)+$' /usr/share/dict/web2 | grep -v "ss\|se\|st\|es\|ee\|et\|ts\|te\|tt" |grep -v "oo\|ob\|om\|bb\|bm\|bo\|mm\|mo\|mb" |grep -v "ll\|lh\|lg\|hh\|hg\|hl\|gg\|gl\|gh" | grep -v "dd\|du\|di\|uu\|us\|ui\|id\|ii\|iu"
-
-#echo {z,c,h}{z,c,h} {r,u,l}{r,u,l} {a,i,m}{a,i,m} {o,q,e}{o,q,e} |sed 's/ /\\|/g'
-
 [[ ${#*} -lt 4 ]] && echo "Expecting four three letter arguments, e.g., abo gpq hei stv" && exit 1
 
-[[ ! -z "${f}" ]] && echo "Using first character \"${f}\" found in Environment f=${f}."
+[[ ! -z "${5}" ]] && first="${5}"
 quote="'"
-grepexp="grep -E ${quote}^${f}("
+all_letters="${1}${2}${3}${4}"
+
+grepexp="grep -E ${quote}^${first}("
 filterexp=""
 for i in {1..4}; do
     grepexp="${grepexp}(${1:0:1}|${1:1:1}|${1:2:1})?"
     filterexp="${filterexp} $(echo {${1:0:1},${1:1:1},${1:2:1}}{${1:0:1},${1:1:1},${1:2:1}})"
     shift
 done
-
 grepexp="${grepexp})+\$${quote} /usr/share/dict/web2"
+
 filterexp=$(echo ${filterexp} | sed 's/ /\\|/g')
 
-[[ ! -z ${r} ]] && ie="${ie} | grep [${r}] |"
 eval ${grepexp} | while read word; do
-    [[ ${#word} -lt 3 ]] || [[ ${#word} -gt 12 ]] && continue
+     [[ ${#word} -lt 3 ]] || [[ ${#word} -gt 14 ]] && continue
     echo ${#word} ${word}
-done | grep -v "${filterexp}" | sort -n
+done | grep -v ${filterexp} | sort -n | cut -d' ' -f2
+
+# | while read word; do echo $(echo $word | sed 's/\(.\)/\1\n/g' | grep -v "^$" | sort | uniq -c |
+# wc -l) ${word}; done | sort -n
+
 

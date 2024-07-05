@@ -7,9 +7,6 @@
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/brew</string>
-        <string>update</string>
-        <string>&&</string>
-        <string>/opt/homebrew/bin/brew</string>
         <string>upgrade</string>
     </array>
     <key>StartCalendarInterval</key>

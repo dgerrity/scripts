@@ -50,6 +50,7 @@ linkfile findprefs
 linkfile hang
 linkfile inline
 linkfile ipinfo
+linkfile itunes
 linkfile lb
 linkfile proxy
 linkfile ovpn
@@ -70,5 +71,6 @@ symlink "$(pwd)/applescript.el" "${HOME}/.emacs.d/add-ins/applescript.el"
 symlink "$(pwd)/editorconfig.el" "${HOME}/.emacs.d/add-ins/editorconfig.el"
 symlink "$(pwd)/markdown-mode.el" "${HOME}/.emacs.d/add-ins/markdown-mode.el"
 
-echo ">> Copy com.centvc.socat_listener.plist if desired into ${HOME}/Library/LaunchAgents"
-echo ">> Copy $(pwd)/com.centvc.iperf3.plist if desired into ${HOME}/Library/LaunchAgents"
+echo "cp com.centvc.socat_listener.plist ${HOME}/Library/LaunchAgents #if desired"
+echo "cp com.centvc.iperf3.plist ${HOME}/Library/LaunchAgents #if desired"
+echo "cp homebrew.update.plist ${HOME}/Library/LaunchAgents/ #if desired"

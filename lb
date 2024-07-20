@@ -20,7 +20,13 @@ filterexp=$(echo ${filterexp} | sed 's/ /\\|/g')
 eval ${grepexp} | while read word; do
      [[ ${#word} -lt 3 ]] || [[ ${#word} -gt 14 ]] && continue
     echo ${#word} ${word}
-done | grep -v ${filterexp} | sort -n | cut -d' ' -f2
+done |\
+    grep -v ${filterexp} |\
+    sort -n | cut -d' ' -f2 |\
+    while read word; do
+	echo "${word} $(echo $word |sed 's/\(.\)/\1\n/g' | grep -v ^$ | sort | uniq | wc -l)"
+    done
+
 
 # | while read word; do echo $(echo $word | sed 's/\(.\)/\1\n/g' | grep -v "^$" | sort | uniq -c |
 # wc -l) ${word}; done | sort -n

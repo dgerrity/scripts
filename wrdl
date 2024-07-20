@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+###############################################################################
+#
+# wrdl - processes arguments in search of a word fit in the game wordle.
+#
+##############################################################################
+
+dict ()
+{
+    set -o noglob;
+    local testpat=$(echo "${1}" | sed 's/[0-9]//g');
+    local pat="${1}";
+    if [[ ${#1} -ne ${#testpat} ]]; then
+        local sub="";
+        for ((i=1; i<6; i++))
+        do
+            sub="${sub}.";
+            pat=$(echo "${pat}" | sed "s/${i}/${sub}/g");
+        done;
+    fi;
+    cat "${DEFAULT_DICT:-/usr/share/dict/words}" | tr '[:upper:]' '[:lower:]' | \
+	grep -x "${pat}" | sort | uniq;
+    set +o noglob
+}
+
+pat="${1}"
+shift
+
+gstr=""
+removeList=""
+vstr=""
+
+for ((i=1; i<=${#@}; i++)) {
+    thisWord="${!i}"
+    for ((j=0; j<${#thisWord}; j++)) {
+	thisChar="${thisWord:$j:1}"
+	case "${thisChar}" in
+	    [[:lower:]]) removeList+="${thisChar}";;
+	    [[:upper:]]) lower=$(echo ${thisChar} | tr [[:upper:]] [[:lower:]])
+			 gstr+="| grep ${lower}";;
+ 	  ".")           continue;;
+	    *)           echo "invalid char";;
+	esac
+    }    
+}
+
+removeList="| grep -v [${removeList}]"
+eval ""dict" "${pat}" "${gstr}" "${removeList}" "${vstr}""
+eval ""dict" "${pat}" "${gstr}" "${removeList}" "${vstr}"" | sed 's/\(.\)/\1\n/g' | \
+    grep -v "^$" | sort | uniq -c | sort -nr | head
+
+    
+

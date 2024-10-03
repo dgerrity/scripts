@@ -36,6 +36,7 @@ function me()       { echo "${HOME}/.bash_profile";                             
 function mute()     { osascript -e 'set volume with output muted';                }            
 function oracle()   { pushd ~/Oracle/Oracle\ Content/;                            }
 function path()     { echo $PATH | tr ':' '\n';                                   }
+function rank()     { sort | uniq -c | sort -rn | head;                           }
 function su()       { pwd -P > /tmp/.pushd; /usr/bin/su "$@";                     }
 function sud()      { echo "${1}" > /tmp/.pushd; /usr/bin/su "$@";                }
 function unmute()   { osascript -e 'set volume withouttput muted';                }            
@@ -1134,6 +1135,8 @@ export LSCOLORS=dxfxcxdxbxegedabagacad
 export REPLYTO="dan@gerrity.org"
 alias envp="env | sort -f"
 alias envg="env | sort -f | grep -i"
+alias g="grep"
+alias gv="grep -v"
 alias hexdump="hexdump -C"
 alias htop="sudo htop"
 alias kk="sudo kill"

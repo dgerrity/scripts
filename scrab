@@ -9,15 +9,15 @@
 # 
 # Bugs and especially performance hints welcome.  
 #
-# $Source: /Users/dan/bin/RCS/scrab-v $
-# $Date: 2013-12-06 22:31:40-08 $
-# $Revision: 1.27 $
+# $Source: /Users/dan/.scripts/scrab $
+# $Date: 2025-10-28 14:31:40-08 $
+# $Revision: 1.28 $
 #
 ###############################################################################
 
 set -o noglob
 me="$(basename $0)"
-version=$(echo '$Revision: 1.27 $' | sed 's/.Revision: \(.*\).\$$/\1/')
+version=$(echo '$Revision: 1.28 $' | sed 's/.Revision: \(.*\).\$$/\1/')
 args="${@}"
 
 function usage() {
@@ -53,6 +53,8 @@ function usage() {
     echo "  -D dict      Add specified dictionary (can be used multiple times)"
     echo "               Default is environment \"DEFAULT_DICT\"; if unset, Webster's"
     echo "               2nd Edition is used.  Current value: ${DEFAULT_DICT:-/usr/share/dict/words}"
+    echo "  -4 letter    Repeat input letters four times and require \"letter\" in the output (useful for NYT Bee)"          
+    echo "  -b           \"Blank\" letter - iterate over the range [a-z]"
     echo "  -n           No summary stats - just words."
     echo "  -v           Verbose"
     echo "  -d           Debug"
@@ -138,7 +140,7 @@ function filterWords() {
 #   Expects list of words to filter in tmp2, adds them to tmp1
     enter $FUNCNAME $LINENO "$@"
     decho "Checking $(wc -l ${tmp2} | awk '{print $1}') words"
-    decho "Using | ${o_prefix} | [${rack}] | ${o_suffix} |"
+    decho "Using | ${o_prefix} | [${o_rack}] | ${o_suffix} |"
     [[ ${o_debug} ]] && cat "${tmp2}"
     touch "${tmp1}"
     for word in $(cat "${tmp2}"); do
@@ -218,7 +220,7 @@ function checkOpts() {
 	echo "Extra unrecognized arguments.  ${me} -- help for usage."; exit 2
     fi
 
-    for opt in rack o_prefix o_suffix o_either o_req; do
+    for opt in o_rack o_prefix o_suffix o_either o_req; do
 	if [[ "$(echo "${!opt}" | sed 's/[[:alpha:]]//g')" != "" ]]; then
 	    echo -en "Illegal letters specified for "
 	    echo "$(echo ${opt} | sed 's/^o_//'): ${!opt}";
@@ -229,9 +231,9 @@ function checkOpts() {
 #   Remove specified characters from rack
     sed_remove="sed$(echo "${o_remove}" | sed 's#\(.\)# -e s/\1//#g')"
     [[ ${o_verbose} ]] && echo "sed_remove=${sed_remove}"
-    [[ ${o_debug} ]] && echo "rack before-${rack}"
-    rack=$(echo ${rack} | ${sed_remove})
-    [[ ${o_debug} ]] && echo "rack after=${rack}"
+    [[ ${o_debug} ]] && echo "rack before=${o_rack}"
+    o_rack=$(echo ${o_rack} | ${sed_remove})
+    [[ ${o_debug} ]] && echo "rack after=${o_rack}"
 
 #   Prefix/suffix/either/and
     if [[ ${o_and} && ! ${o_prefix} && ! ${o_suffix} ]]; then
@@ -288,7 +290,7 @@ function oneDict() {
 #   Processes one dictionary.
 #   Check dictionary and touch temporary files
     enter $FUNCNAME $LINENO "$@"
-    sed_rack="sed $(echo "${rack}" | sed 's#\(.\)# -e s/\1//#g')"
+    sed_rack="sed $(echo "${o_rack}" | sed 's#\(.\)# -e s/\1//#g')"
     decho "sed_rack |${sed_rack}|"
     sed_req="sed $(echo "${o_req}" | sed "s#\(.\)# -e s/\1//#g")"
     decho "sed_req |${sed_req}|"
@@ -301,25 +303,25 @@ function oneDict() {
     fi
     if [[ ${o_and} ]]; then
 	vecho "Checking words with both ${o_prefix} AND ${o_suffix}"
-	grep -ix "^${o_prefix}[${rack}]*${o_suffix}$" "${tempdict}" | \
+	grep -ix "^${o_prefix}[${o_rack}]*${o_suffix}$" "${tempdict}" | \
 	    grep -ix "^.${o_len}$" | tr [A-Z] [a-z] > "${tmp2}"
 	filterWords and
     else
 	if [[ ${o_prefix} ]]; then
 	    vecho "Checking prefixed words '${o_prefix}'"
-	    grep -ix "^${o_prefix}[${rack}]*$" "${tempdict}" | \
+	    grep -ix "^${o_prefix}[${o_rack}]*$" "${tempdict}" | \
 		grep -ix "^.${o_len}$" | tr [A-Z] [a-z] >  "${tmp2}"
 	    filterWords prefix
 	fi
 	if [[ ${o_suffix} ]]; then
 	    vecho "Checking suffixed words '${o_suffix}'"
-	    grep -ix "^[${rack}]*${o_suffix}$" "${tempdict}" | \
+	    grep -ix "^[${o_rack}]*${o_suffix}$" "${tempdict}" | \
 		grep -ix "^.${o_len}$" | tr [A-Z] [a-z] > "${tmp2}"
 	    filterWords suffix
 	fi
 	if [[ ! ${o_prefix}${o_suffix} ]]; then
 	    vecho "Checking regular words"
-	    grep -ix "^[${rack}]*$" "${tempdict}" | grep -ix "^.${o_len}$" | \
+	    grep -ix "^[${o_rack}]*$" "${tempdict}" | grep -ix "^.${o_len}$" | \
 		tr [A-Z] [a-z] > "${tmp2}"
 	    filterWords normal
 	fi
@@ -368,15 +370,15 @@ function allDicts() {
 function processRack() {
     enter $FUNCNAME $LINENO "$@"
     if [[ ${o_double} ]]; then
-	origrack=${rack}
+	origrack=${o_rack}
 	for dcmd in $(echo ${o_double} | tr ';' ' '); do
 	    wcmd="$(echo ${dcmd} | tr '|' ' ')"
 	    cmd="$(echo ${wcmd} | cut -f1 -d' ')"
 	    for frag in $(echo ${wcmd} | cut -f2- -d' '); do
-		rack=${origrack}
+		o_rack=${origrack}
 		case ${cmd} in
 		    use)   decho "use ${frag}"
-			   o_pat=".*${frag}.*"; rack=${origrack}$(echo ${frag} | \
+			   o_pat=".*${frag}.*"; o_rack=${origrack}$(echo ${frag} | \
 			       sed 's/[^a-z]//g'); o_use=true;;
 		    pre)   decho "prefix ${frag}"; o_prefix="${frag}";;
 		    suf)   decho "suffix ${frag}"; o_suffix="${frag}";;
@@ -395,10 +397,10 @@ function mainprog() {
     enter $FUNCNAME $LINENO "$@"
     initFiles
     if [[ ${o_blank} ]]; then
-	origrack=${rack}
+	origrack=${o_rack}
 	for L in {a..z}; do
 	    for dict in ${o_dict}; do 
-		echo -en "${L} ";  rack="${origrack}${L}"; 
+		echo -en "${L} ";  o_rack="${origrack}${L}"; 
 		processRack
 	    done
 	done
@@ -423,7 +425,7 @@ function mainprog() {
 
 # The first argument must be the letter rack
 if [[ "${1:0:1}" != "-" ]]; then
-    rack=${1}
+    o_rack=${1}
     shift
 else
     o_no_rack=true
@@ -440,7 +442,7 @@ fi
 
 unset o_prefix o_suffix o_either o_and o_pat o_req o_verbose o_debug
 unset o_len o_growl o_dict o_nosum o_double o_use o_remove
-while getopts ":r:p:P:s:S:e:E:au:U:x:R:bm:M:q:Q:l:L:w:D:nvd" option; do
+while getopts ":r:p:P:s:S:e:E:au:U:x:R:bm:M:4:q:Q:l:L:w:D:nvd" option; do
     decho "Top of getops: option ${option}, OPTARG ${OPTARG}, OPTIND ${OPTIND}, line ${@}"
     decho "line after OPTIND is ${@:$OPTIND}"
     [[ ${OPTARG:0:2} == "--" ]] && OPTARG="-" && option="double" && let OPTIND--
@@ -454,15 +456,16 @@ while getopts ":r:p:P:s:S:e:E:au:U:x:R:bm:M:q:Q:l:L:w:D:nvd" option; do
 	e) o_either=${lowerarg};;
 	E) o_pat="${lowerarg}.*\|.*${lowerarg}";;
 	a) o_and=true;;
-	u) o_pat=".*${lowerarg}.*"; rack=${rack}$(echo ${OPTARG} | sed 's/[^a-z]//g');
+	u) o_pat=".*${lowerarg}.*"; o_rack=${o_rack}$(echo ${OPTARG} | sed 's/[^a-z]//g');
 	   o_use=true;;
 	U) o_pat=".*${lowerarg}.*"; o_use=true;;
-	x) rack=${rack}${lowerarg};;
+	x) o_rack=${o_rack}${lowerarg};;
         R) o_remove=${lowerarg};; 
 	b) o_blank=true;;
-	m) o_pat="${lowerarg}"; rack=${rack}$(echo ${OPTARG} | sed 's/[^a-z]//g');;
+	m) o_pat="${lowerarg}"; o_rack=${o_rack}$(echo ${OPTARG} | sed 's/[^a-z]//g');;
 	M) o_pat="${lowerarg}";;
-	q) rack=${rack}${lowerarg}; o_req=${o_req}${lowerarg};;
+	4) [[ ${o_no_rack} ]] && usage; o_rack="${o_rack}${o_rack}${o_rack}${o_rack}"; o_req=${lowerarg}; o_minlen=4;;
+	q) o_rack=${o_rack}${lowerarg}; o_req=${o_req}${lowerarg};;
 	Q) o_req=${o_req}${lowerarg};;
 	l) o_minlen=${OPTARG};;
 	L) o_maxlen=${OPTARG};;

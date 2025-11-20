@@ -1,72 +1,94 @@
 #!/opt/homebrew/bin/bash
 
-items=($@)
+# Load dictionary into memory
+declare -A DICT
+while IFS= read -r w; do
+    DICT["$w"]=1
+done < "$DEFAULT_DICT"
+
+in_dict() {
+    local w="${1^^}"
+    [[ ${DICT["$w"]+_} ]]
+}
+
+items=("$@")
 len="${#items[@]}"
+: > .quartiles.txt   # truncate
 
 # Show arguments for typos
-for (( i=0; i<${len}/4; i++ )); do
+for (( i=0; i< len/4; i++ )); do
     big=""
     for (( j=0; j<4; j++ )); do
-	index=$(( i*4+j ))
-	echo -n "${items[index]}"
-	big+="${items[index]}"
-	[[ $j -lt 3 ]] && echo -n "-"
+        index=$(( i*4 + j ))
+        echo -n "${items[index]}"
+        big+="${items[index]}"
+        [[ $j -lt 3 ]] && echo -n "-"
     done
-    [[ ! $(grep -x "${big}" /usr/share/dict/web2) ]] && echo -n " (not found)"
+    if ! in_dict "$big"; then
+        echo -n " (not found)"
+    else
+        echo "${big^^}" >> .quartiles.txt
+    fi
     echo
 done
 echo "=================="
 
 # Generate list of words
-echo > .quartiles.txt
-for (( i=0; i<${len}; i++ )); do
-    for (( j=$i+1; j<${len}; j++ )); do
-	echo "${items[$i]}${items[j]}" >> .quartiles.txt
-	echo "${items[$j]}${items[i]}" >> .quartiles.txt
-        for (( k=$j+1; k<${len}; k++ )); do
-	    echo "${items[$i]}${items[$j]}${items[$k]}" >> .quartiles.txt
-	    echo "${items[$i]}${items[$k]}${items[$j]}" >> .quartiles.txt
-	    echo "${items[$j]}${items[$i]}${items[$k]}" >> .quartiles.txt
-	    echo "${items[$j]}${items[$k]}${items[$i]}" >> .quartiles.txt
-	    echo "${items[$k]}${items[$i]}${items[$j]}" >> .quartiles.txt
-	    echo "${items[$k]}${items[$j]}${items[$i]}" >> .quartiles.txt
-	done
+for (( i=0; i<len; i++ )); do
+    echo "${items[i]}" >> .quartiles.txt
+    for (( j=0; j<len; j++ )); do
+        (( j == i )) && continue        # BUGFIX: use arithmetic, not bare j
+        echo "${items[i]}${items[j]}" >> .quartiles.txt
+        for (( k=0; k<len; k++ )); do
+            (( k == i || k == j )) && continue
+            echo "${items[i]}${items[j]}${items[k]}" >> .quartiles.txt
+        done
     done
 done
 
-echo > .q
-cat .quartiles.txt | while read word; do
-    [[ ${#word} < 3 ]] && continue
-    if [[ $(grep -x "${word}" /usr/share/dict/web2) ]]; then echo "${word}" 
-    elif [[ "${word:${#word}-1:1}" == "s" ]]; then
-	# fund found but not funds
-	[[ $(grep -x "${word:0:${#word}-1}" /usr/share/dict/web2) ]] && echo "${word}*"
-    elif [[ "${word:${#word}-3:3}" == "ies" ]]; then
-	# body found but not bodies
-	[[ $(grep -x "${word:0:${#word}-3}y" /usr/share/dict/web2) ]] && echo "${word}*"
-	# money found but not monies
-	[[ $(grep -x "${word:0:${#word}-3}ey" /usr/share/dict/web2) ]] && echo "${word}*"
-    elif [[ "${word:${#word}-3:3}" == "ing" ]]; then
-	# grouse found but not grousing
-	[[ $(grep -x "${word:0:${#word}-3}e" /usr/share/dict/web2) ]] && echo "${word}*"
-	[[ $(grep -x "${word:0:${#word}-3}" /usr/share/dict/web2) ]] && echo "${word}*"
-	 
-    elif [[ "${word:${#word}-2:2}" == "ed" ]]; then
-	# conjure found but not conjured, burp but not burped
-	[[ $(grep -x "${word:0:${#word}-1}" /usr/share/dict/web2) ]] && echo "${word}*"
-	[[ $(grep -x "${word:0:${#word}-2}" /usr/share/dict/web2) ]] && echo "${word}*"
-    elif [[ "${word:${#word}-2:2}" == "ie" ]]; then
-	# boot found but not bootie
-	[[ $(grep -x "${word:0:${#word}-2}" /usr/share/dict/web2) ]] && echo "${word}*"
-    elif [[ "${word:${#word}-2:2}" == "ee" ]] then
-	 # mentor found but not mentee
-	 [[ $(grep -x "${word:0:${#word}-2}or" /usr/share/dict/web2) ]] && echo "${word}*"
-    elif [[ "${word:${#word}-3:3}" == "ize" ]] then
-	 # penal but not penalize
-	 [[ $(grep -x "${word:0:${#word}-2}or" /usr/share/dict/web2) ]] && echo "${word}*"
-    fi
-done | tee -a .q
+touch .q
+while read -r wordl; do
+    [[ ${#wordl} -lt 3 ]] && continue
+    word="${wordl^^}"
 
-cat .q | sort | uniq > .quartiles.txt && rm .q
-echo "----------------------------------"
-less .quartiles.txt
+    if in_dict "$word"; then
+        echo "$wordl"
+
+    elif [[ "${word: -1}" == "S" ]]; then
+        # fund found but not funds
+        in_dict "${word:0:${#word}-1}" && echo "${wordl}*"
+
+    elif [[ "${word: -3}" == "IES" ]]; then
+        # body found but not bodies
+        in_dict "${word:0:${#word}-3}Y" && echo "${wordl}*"
+        # money found but not monies
+        in_dict "${word:0:${#word}-3}EY" && echo "${wordl}*"
+
+    elif [[ "${word: -3}" == "ING" ]]; then
+        # grouse found but not grousing
+        in_dict "${word:0:${#word}-3}E" && echo "${wordl}*"
+        in_dict "${word:0:${#word}-3}" && echo "${wordl}*"
+
+    elif [[ "${word: -2}" == "ED" ]]; then
+        # conjure found but not conjured, burp but not burped
+        in_dict "${word:0:${#word}-1}" && echo "${wordl}*"
+        in_dict "${word:0:${#word}-2}" && echo "${wordl}*"
+
+    elif [[ "${word: -2}" == "IE" ]]; then
+        # boot found but not bootie
+        in_dict "${word:0:${#word}-2}" && echo "${wordl}*"
+
+    elif [[ "${word: -2}" == "EE" ]]; then  # BUGFIX: add '; then'
+        # mentor found but not mentee
+        in_dict "${word:0:${#word}-2}OR" && echo "${wordl}*"
+
+    elif [[ "${word: -3}" == "IZE" ]]; then  # BUGFIX: add '; then'
+        # comment says penal/penalize – adjust to taste
+        in_dict "${word:0:${#word}-3}" && echo "${wordl}*"
+    fi
+done < .quartiles.txt >> .q
+
+sort -u .q | tr '[:upper:]' '[:lower:]' > .quartiles.txt
+rm .q
+echo "$(echo $(cat .quartiles.txt | wc -l)) words found."
+cat .quartiles.txt

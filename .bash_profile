@@ -453,6 +453,7 @@ function interview() {
 ###############################################################################
 # Internet and lookup functions
 
+
 function lookup() { open "dict://$*"; }
 
 function quote() {
@@ -666,6 +667,17 @@ function dict() {
     set +o noglob
 }
 
+function dictadd() {
+    head "${DEFAULT_DICT}"
+    echo
+    read -p "Insert ${1}? [n] " ans
+	[[ "${ans}" != "y" ]] && return 1
+    printf '%s\n' "${1}" >> "${DEFAULT_DICT}"
+    LC_ALL_C=C sort -u "${DEFAULT_DICT}" > "${DEFAULT_DICT}.tmp"
+    mv "${DEFAULT_DICT}.tmp" "${DEFAULT_DICT}"
+    grep -C3 -x "${1}" "${DEFAULT_DICT}"
+}
+
 function emissions() {
 #   Looks up the emissions used in a particular flight
     if [[ ! ${4} ]]; then
@@ -717,6 +729,15 @@ function slack() {
     msg="$*"
     str="osascript -e 'tell script \"Slack\" to send message \""${msg}"\" "${userchan}"'"
     eval "${str}"
+}
+
+
+###############################################################################
+# Web function
+
+function ssl() {
+    [[ ! ${1} ]] && echo "ssl domain.tld" && return
+    echo | openssl s_client -connect "${1}":443 | openssl x509 -noout -text
 }
 
 ###############################################################################

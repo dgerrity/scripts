@@ -731,9 +731,33 @@ function slack() {
     eval "${str}"
 }
 
+function openai-test() {
+curl -s https://api.openai.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [
+      {"role": "user", "content": "ping"}
+    ]
+  }' | jq -r '.choices[0].message.content'
+}
+
+function gpt() {
+  local prompt="$*"
+  curl -s https://api.openai.com/v1/chat/completions \
+    -H "Authorization: Bearer $OPENAI_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"model\": \"gpt-5.1\",
+      \"messages\": [
+        {\"role\": \"user\", \"content\": \"${prompt}\"}
+      ]
+    }" | jq -r '.choices[0].message.content'
+}
 
 ###############################################################################
-# Web function
+# Web functions
 
 function ssl() {
     [[ ! ${1} ]] && echo "ssl domain.tld" && return

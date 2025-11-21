@@ -3,6 +3,7 @@
 # Load dictionary into memory
 declare -A DICT
 while IFS= read -r w; do
+    w="${w^^}"    # Internal dictionary set to all upper on load
     DICT["$w"]=1
 done < "$DEFAULT_DICT"
 
@@ -37,7 +38,7 @@ echo "=================="
 for (( i=0; i<len; i++ )); do
     echo "${items[i]}" >> .quartiles.txt
     for (( j=0; j<len; j++ )); do
-        (( j == i )) && continue        # BUGFIX: use arithmetic, not bare j
+        (( j == i )) && continue
         echo "${items[i]}${items[j]}" >> .quartiles.txt
         for (( k=0; k<len; k++ )); do
             (( k == i || k == j )) && continue
@@ -47,44 +48,12 @@ for (( i=0; i<len; i++ )); do
 done
 
 touch .q
-while read -r wordl; do
-    [[ ${#wordl} -lt 3 ]] && continue
-    word="${wordl^^}"
+while read -r word; do
+    [[ ${#word} -lt 3 ]] && continue
+    wordu="${word^^}"
 
     if in_dict "$word"; then
-        echo "$wordl"
-
-    elif [[ "${word: -1}" == "S" ]]; then
-        # fund found but not funds
-        in_dict "${word:0:${#word}-1}" && echo "${wordl}*"
-
-    elif [[ "${word: -3}" == "IES" ]]; then
-        # body found but not bodies
-        in_dict "${word:0:${#word}-3}Y" && echo "${wordl}*"
-        # money found but not monies
-        in_dict "${word:0:${#word}-3}EY" && echo "${wordl}*"
-
-    elif [[ "${word: -3}" == "ING" ]]; then
-        # grouse found but not grousing
-        in_dict "${word:0:${#word}-3}E" && echo "${wordl}*"
-        in_dict "${word:0:${#word}-3}" && echo "${wordl}*"
-
-    elif [[ "${word: -2}" == "ED" ]]; then
-        # conjure found but not conjured, burp but not burped
-        in_dict "${word:0:${#word}-1}" && echo "${wordl}*"
-        in_dict "${word:0:${#word}-2}" && echo "${wordl}*"
-
-    elif [[ "${word: -2}" == "IE" ]]; then
-        # boot found but not bootie
-        in_dict "${word:0:${#word}-2}" && echo "${wordl}*"
-
-    elif [[ "${word: -2}" == "EE" ]]; then  # BUGFIX: add '; then'
-        # mentor found but not mentee
-        in_dict "${word:0:${#word}-2}OR" && echo "${wordl}*"
-
-    elif [[ "${word: -3}" == "IZE" ]]; then  # BUGFIX: add '; then'
-        # comment says penal/penalize – adjust to taste
-        in_dict "${word:0:${#word}-3}" && echo "${wordl}*"
+        echo "$word"
     fi
 done < .quartiles.txt >> .q
 

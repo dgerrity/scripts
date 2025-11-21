@@ -18,7 +18,7 @@ grepexp="${grepexp})+\$${quote} /usr/share/dict/web2"
 filterexp=$(echo ${filterexp} | sed 's/ /\\|/g')
 
 eval ${grepexp} | while read word; do
-     [[ ${#word} -lt 3 ]] || [[ ${#word} -gt 14 ]] && continue
+     [[ ${#word} -lt 3 ]] || [[ ${#word} -gt 12 ]] && continue
     echo ${#word} ${word}
 done |\
     grep -v ${filterexp} |\

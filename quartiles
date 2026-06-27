@@ -36,13 +36,17 @@ echo "=================="
 
 # Generate list of words
 for (( i=0; i<len; i++ )); do
-    echo "${items[i]}" >> .quartiles.txt
+#    echo "${items[i]}" >> .quartiles.txt
     for (( j=0; j<len; j++ )); do
         (( j == i )) && continue
         echo "${items[i]}${items[j]}" >> .quartiles.txt
         for (( k=0; k<len; k++ )); do
             (( k == i || k == j )) && continue
             echo "${items[i]}${items[j]}${items[k]}" >> .quartiles.txt
+	    for (( l=0; l<len; l++)); do
+		(( k == i || k == j || k ==l )) && continue
+		echo "${items[i]}${items[j]}${items[k]}${items[l]}" >> .quartiles.txt
+	    done
         done
     done
 done

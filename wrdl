@@ -1,53 +1,363 @@
 #!/usr/bin/env bash
 ###############################################################################
+# wrdl - filter a dictionary using Wordle clues and rank useful next guesses.
 #
-# wrdl - processes arguments in search of a word fit in the game wordle.
+# Usage:
+#   wrdl PATTERN [GUESS ...]
 #
-##############################################################################
+# PATTERN is the current 5-position green pattern, e.g. .a..e
+# Digits retain the old shorthand: 2a2 -> ..a..
+#
+# In each GUESS:
+#   UPPERCASE = green or yellow (the letter is present)
+#   lowercase = gray (that occurrence is not present)
+#   .         = ignored / no clue
+#
+# Important: PATTERN is assumed to contain ALL currently known green letters.
+# Therefore an uppercase letter in a guess whose position is not the same green
+# in PATTERN is treated as yellow and forbidden from that position.
+#
+# DEFAULT_DICT may point at a custom word list. Default: /usr/share/dict/words
+###############################################################################
 
-dict ()
-{
-    set -o noglob;
-    local testpat=$(echo "${1}" | sed 's/[0-9]//g');
-    local pat="${1}";
-    if [[ ${#1} -ne ${#testpat} ]]; then
-        local sub="";
-        for ((i=1; i<6; i++))
-        do
-            sub="${sub}.";
-            pat=$(echo "${pat}" | sed "s/${i}/${sub}/g");
-        done;
-    fi;
-    cat "${DEFAULT_DICT:-/usr/share/dict/words}" | tr '[:upper:]' '[:lower:]' | \
-	grep -x "${pat}" | sort | uniq;
-    set +o noglob
+set -o pipefail
+export LC_ALL=C
+
+usage() {
+    cat >&2 <<'USAGE'
+Usage: wrdl PATTERN [GUESS ...]
+
+Examples:
+  wrdl '.a..e' 'crAne' 'slAte'
+  wrdl '2a2'   'crAne'
+
+PATTERN: lowercase green letters plus '.' for unknowns.
+         Digits 1-5 may be used as runs of dots (2a2 == ..a..).
+GUESS:   uppercase = present (green/yellow), lowercase = gray, '.' = ignored.
+USAGE
+    exit 2
 }
 
-pat="${1}"
+[[ $# -ge 1 ]] || usage
+
+expand_pattern() {
+    local src=$1 out="" c i n
+    for ((i=0; i<${#src}; i++)); do
+        c=${src:i:1}
+        case "$c" in
+            [1-5])
+                n=$c
+                while (( n-- > 0 )); do out+='.'; done
+                ;;
+            [A-Z]) out+="$(printf '%s' "$c" | tr '[:upper:]' '[:lower:]')" ;;
+            [a-z.]) out+="$c" ;;
+            *)
+                printf 'wrdl: invalid character %q in pattern %q\n' "$c" "$src" >&2
+                exit 2
+                ;;
+        esac
+    done
+    printf '%s' "$out"
+}
+
+pattern=$(expand_pattern "$1")
 shift
 
-gstr=""
-removeList=""
-vstr=""
+if [[ ${#pattern} -ne 5 ]]; then
+    printf 'wrdl: pattern expands to %d positions, not 5: %q\n' \
+        "${#pattern}" "$pattern" >&2
+    exit 2
+fi
 
-for ((i=1; i<=${#@}; i++)) {
-    thisWord="${!i}"
-    for ((j=0; j<${#thisWord}; j++)) {
-	thisChar="${thisWord:$j:1}"
-	case "${thisChar}" in
-	    [[:lower:]]) removeList+="${thisChar}";;
-	    [[:upper:]]) lower=$(echo ${thisChar} | tr [[:upper:]] [[:lower:]])
-			 gstr+="| grep ${lower}";;
- 	  ".")           continue;;
-	    *)           echo "invalid char";;
-	esac
-    }    
+for guess in "$@"; do
+    if [[ ${#guess} -ne 5 ]]; then
+        printf 'wrdl: guess must contain exactly 5 positions: %q\n' "$guess" >&2
+        exit 2
+    fi
+    if [[ $guess == *[^A-Za-z.]* ]]; then
+        printf 'wrdl: guess contains an invalid character: %q\n' "$guess" >&2
+        exit 2
+    fi
+done
+
+dict=${DEFAULT_DICT:-/usr/share/dict/words}
+if [[ ! -r $dict ]]; then
+    printf 'wrdl: cannot read dictionary: %s\n' "$dict" >&2
+    exit 2
+fi
+
+guesses=""
+for guess in "$@"; do
+    [[ -n $guesses ]] && guesses+=,
+    guesses+=$guess
+done
+
+awk -v pattern="$pattern" -v guesses="$guesses" '
+function lower(c) { return tolower(c) }
+function fail(msg) {
+    print "wrdl: contradictory clues: " msg > "/dev/stderr"
+    bad = 1
+}
+function setmax(letter, value) {
+    if (!(letter in maxc) || value < maxc[letter]) maxc[letter] = value
+}
+function log2(x) { return log(x) / log(2) }
+
+# Return the exact Wordle feedback pattern for GUESS against ANSWER.
+# G = green, Y = yellow, X = gray.  The two-pass algorithm is important for
+# repeated letters: greens consume copies first, then yellows consume only the
+# remaining unmatched copies.
+function feedback(guess, answer,    p,c,out,remain) {
+    delete remain
+    out = ""
+    for (p = 1; p <= 5; p++) {
+        if (substr(guess,p,1) == substr(answer,p,1)) {
+            mark[p] = "G"
+        } else {
+            mark[p] = "X"
+            remain[substr(answer,p,1)]++
+        }
+    }
+    for (p = 1; p <= 5; p++) {
+        if (mark[p] == "G") continue
+        c = substr(guess,p,1)
+        if (remain[c] > 0) {
+            mark[p] = "Y"
+            remain[c]--
+        }
+    }
+    for (p = 1; p <= 5; p++) out = out mark[p]
+    return out
 }
 
-removeList="| grep -v [${removeList}]"
-eval ""dict" "${pat}" "${gstr}" "${removeList}" "${vstr}""
-eval ""dict" "${pat}" "${gstr}" "${removeList}" "${vstr}"" | sed 's/\(.\)/\1\n/g' | \
-    grep -v "^$" | sort | uniq -c | sort -nr | head
+BEGIN {
+    # Green pattern.
+    for (p = 1; p <= 5; p++) {
+        c = substr(pattern, p, 1)
+        if (c != ".") {
+            fixed[p] = c
+            fixedcount[c]++
+            tested[c] = 1
+        }
+    }
 
-    
+    # Every guess contributes positional and multiplicity constraints.
+    ng = (guesses == "" ? 0 : split(guesses, g, ","))
+    for (gi = 1; gi <= ng; gi++) {
+        delete present
+        delete gray
 
+        for (p = 1; p <= 5; p++) {
+            raw = substr(g[gi], p, 1)
+            if (raw == ".") continue
+            c = lower(raw)
+            tested[c] = 1
+
+            if (raw ~ /[A-Z]/) {
+                present[c]++
+
+                # If it is not the known green for this square, it was yellow.
+                if (!(p in fixed) || fixed[p] != c)
+                    forbidden[p SUBSEP c] = 1
+            } else {
+                gray[c]++
+                # A gray tile can never be this letter in this square, even
+                # when another copy of the letter was colored elsewhere.
+                forbidden[p SUBSEP c] = 1
+            }
+        }
+
+        for (c in present)
+            if (!(c in minc) || present[c] > minc[c]) minc[c] = present[c]
+
+        # A gray copy alongside colored copies gives the exact count.
+        for (c in gray)
+            setmax(c, (c in present) ? present[c] : 0)
+    }
+
+    # Validate clues before reading the dictionary.
+    for (c in minc)
+        if ((c in maxc) && minc[c] > maxc[c])
+            fail("letter " toupper(c) " is required at least " minc[c] \
+                 " time(s) but allowed at most " maxc[c])
+
+    for (c in fixedcount)
+        if ((c in maxc) && fixedcount[c] > maxc[c])
+            fail("green pattern contains " fixedcount[c] " " toupper(c) \
+                 "(s), but guesses allow at most " maxc[c])
+
+    for (p = 1; p <= 5; p++)
+        if ((p in fixed) && ((p SUBSEP fixed[p]) in forbidden))
+            fail("position " p " says " toupper(fixed[p]) \
+                 " is both green and not allowed there")
+
+    for (c in minc) {
+        capacity = 0
+        for (p = 1; p <= 5; p++) {
+            if (p in fixed) {
+                if (fixed[p] == c) capacity++
+            } else if (!((p SUBSEP c) in forbidden)) {
+                capacity++
+            }
+        }
+        if (minc[c] > capacity)
+            fail("letter " toupper(c) " is required " minc[c] \
+                 " time(s), but only " capacity " position(s) remain possible")
+    }
+
+    if (bad) exit 2
+}
+{
+    w = tolower($0)
+    sub(/\r$/, "", w)
+    if (w !~ /^[a-z][a-z][a-z][a-z][a-z]$/) next
+
+    # Keep the whole dictionary as the possible next-guess pool. A word need
+    # not itself be a possible answer to be an excellent information probe.
+    if (!(w in seenall)) {
+        seenall[w] = 1
+        allwords[++alln] = w
+    }
+
+    for (p = 1; p <= 5; p++) {
+        c = substr(w, p, 1)
+        if ((p in fixed) && c != fixed[p]) next
+        if ((p SUBSEP c) in forbidden) next
+    }
+
+    delete wc
+    for (p = 1; p <= 5; p++) wc[substr(w, p, 1)]++
+
+    for (c in minc) if (wc[c] < minc[c]) next
+    for (c in maxc) if (wc[c] > maxc[c]) next
+
+    if (!(w in seenword)) {
+        seenword[w] = 1
+        words[++n] = w
+        for (c in wc) if (wc[c] > 0) coverage[c]++
+        for (p = 1; p <= 5; p++) posfreq[p SUBSEP substr(w,p,1)]++
+    }
+}
+END {
+    if (bad) exit 2
+
+    for (i = 1; i <= n; i++) print words[i]
+    print ""
+    printf "%d possible word%s\n", n, (n == 1 ? "" : "s")
+    if (n == 0) exit
+
+    print ""
+    print "Most common letters among candidates (word coverage):"
+    cmd = "sort -nr -k1,1 -k3,3 | head -10"
+    for (c in coverage)
+        printf "%d\t%6.1f%%\t%s\n", coverage[c], 100*coverage[c]/n, toupper(c) | cmd
+    close(cmd)
+
+    # Untested-letter value: a letter occurring in about half the candidates
+    # gives the most useful yes/no split.  Binary entropy ranges from 0 to 1 bit.
+    print ""
+    print "Best untested letters (candidate-splitting value):"
+    cmd = "sort -nr -k1,1 -k2,2 | head -10"
+    untested_n = 0
+    for (ci = 97; ci <= 122; ci++) {
+        c = sprintf("%c", ci)
+        if (c in tested) continue
+        hits = (c in coverage ? coverage[c] : 0)
+        if (hits == 0 || hits == n) continue
+        pyes = hits / n
+        h = -(pyes * log2(pyes) + (1-pyes) * log2(1-pyes))
+        printf "%.6f\t%6.1f%%\t%s\n", h, 100*pyes, toupper(c) | cmd
+        untested_n++
+    }
+    close(cmd)
+    if (untested_n == 0) print "(none)"
+
+    # Rank next guesses by the distribution of exact Wordle feedback patterns
+    # across all remaining answers.  Probe words need not themselves be possible
+    # answers: sometimes five fresh letters are more informative than a plausible
+    # solution.
+    #
+    # Scoring every dictionary word against every answer can be expensive early
+    # in a game. First rank all dictionary words with a cheap heuristic, then run
+    # exact feedback scoring on the best shortlist. When <= 250 candidates remain,
+    # all dictionary words are scored exactly.
+    shortlist_max = 300
+    exact_all_threshold = 250
+    probe_n = 0
+
+    for (i = 1; i <= alln; i++) {
+        guess = allwords[i]
+        delete gc
+        heuristic = 0
+        for (p = 1; p <= 5; p++) {
+            c = substr(guess,p,1)
+            gc[c]++
+            # Reward position splits and presence/absence splits. Repeated copies
+            # get less value here; exact duplicate behavior is handled later.
+            pf = ((p SUBSEP c) in posfreq ? posfreq[p SUBSEP c] : 0)
+            heuristic += (pf < n-pf ? pf : n-pf)
+            if (gc[c] == 1) {
+                cv = (c in coverage ? coverage[c] : 0)
+                heuristic += 2 * (cv < n-cv ? cv : n-cv)
+            } else {
+                heuristic -= n / 4
+            }
+        }
+        # Slight tie-break preference for guesses that could actually solve it.
+        if (guess in seenword) heuristic += 0.01
+
+        if (n <= exact_all_threshold) {
+            probes[++probe_n] = guess
+        } else {
+            # Maintain a small top-K heuristic shortlist without relying on a
+            # particular awk implementation or temporary files.
+            if (probe_n < shortlist_max) {
+                probe_n++
+                probes[probe_n] = guess
+                ph[probe_n] = heuristic
+            } else {
+                minidx = 1
+                for (k = 2; k <= probe_n; k++)
+                    if (ph[k] < ph[minidx]) minidx = k
+                if (heuristic > ph[minidx]) {
+                    probes[minidx] = guess
+                    ph[minidx] = heuristic
+                }
+            }
+        }
+    }
+
+    print ""
+    if (n > exact_all_threshold)
+        printf "Best next guesses (exact scoring of %d heuristic finalists):\n", probe_n
+    else
+        printf "Best next guesses (exact scoring of %d dictionary words):\n", probe_n
+    print "entropy  exp-left  worst  solve%  guess"
+    cmd = "sort -k1,1nr -k2,2n -k3,3n -k4,4nr -k5,5 | head -10"
+
+    for (i = 1; i <= probe_n; i++) {
+        guess = probes[i]
+        delete buckets
+        for (j = 1; j <= n; j++) {
+            key = feedback(guess, words[j])
+            buckets[key]++
+        }
+
+        entropy = 0
+        sumsq = 0
+        worst = 0
+        for (key in buckets) {
+            b = buckets[key]
+            prob = b / n
+            entropy -= prob * log2(prob)
+            sumsq += b * b
+            if (b > worst) worst = b
+        }
+        expected = sumsq / n
+        solvepct = ((guess in seenword) ? 100/n : 0)
+        printf "%.6f\t%8.3f\t%5d\t%6.2f\t%s\n", \
+               entropy, expected, worst, solvepct, guess | cmd
+    }
+    close(cmd)
+}
+' "$dict"

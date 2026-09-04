@@ -209,9 +209,9 @@ function share_mouse() {
     if [[ ! "${gw}" ]]; then
 	port="10022"
 	target="$(dig papamini.dnsdojo.com +short)"
-	other="risc.local"
+	other="cinco.local"
     else
-	target="risc.local"
+	target="cinco.local"
 	other="$(dig papamini.dnsdojo.com +short)"
     fi
     already_running="$(ps axo pid,command | grep "".*[s]sh.*${target}"")"
@@ -1082,7 +1082,7 @@ fgc=${fgcBlack}; bgc=${bgcNone}; bold=";1"
 case $(hostname -s) in
     papamini)      fgc=${fgcYellow};;
     studio)        fgc=${fgcRed};;
-    risc)          fgc=${fgcBlue};;
+    cinco)          fgc=${fgcBlue};;
     rose)          fgc=${fgcRed};;
     dg-mac)        fgc=${fgcGreen};;
     *)             fgc=${fgcBlack}; bgc=${bgcGrey};;
@@ -1101,7 +1101,7 @@ fi
 thishost="$(hostname -s | sed 's/[- ]/_/g')"
 virtualhosts=""
 localhosts="${thishost} ${virtualhosts}"
-homehosts="rose risc papamini"
+homehosts="rose cinco papamini"
 remotehosts="papamini papax router" 
 sshhosts="${virtualhosts} ${localhosts} ${homehosts} ${remotehosts}"
 dyndnshosts="${homehosts} ${remotehosts}"

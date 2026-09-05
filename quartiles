@@ -1,67 +1,66 @@
 #!/opt/homebrew/bin/bash
 
-# Load dictionary into memory
+# Load dictionary into memory, normalized to uppercase.
 declare -A DICT
 while IFS= read -r w; do
-    w="${w^^}"    # Internal dictionary set to all upper on load
-    DICT["$w"]=1
+    [[ -z $w ]] && continue
+    DICT["${w^^}"]=1
 done < "$DEFAULT_DICT"
 
-in_dict() {
-    local w="${1^^}"
-    [[ ${DICT["$w"]+_} ]]
-}
-
+# Normalize the puzzle pieces once rather than for every lookup.
 items=("$@")
-len="${#items[@]}"
-: > .quartiles.txt   # truncate
-
-# Show arguments for typos
-for (( i=0; i< len/4; i++ )); do
-    big=""
-    for (( j=0; j<4; j++ )); do
-        index=$(( i*4 + j ))
-        echo -n "${items[index]}"
-        big+="${items[index]}"
-        [[ $j -lt 3 ]] && echo -n "-"
-    done
-    if ! in_dict "$big"; then
-        echo -n " (not found)"
-    else
-        echo "${big^^}" >> .quartiles.txt
-    fi
-    echo
+len=${#items[@]}
+for ((i=0; i<len; i++)); do
+    items[i]=${items[i]^^}
 done
-echo "=================="
 
-# Generate list of words
-for (( i=0; i<len; i++ )); do
-#    echo "${items[i]}" >> .quartiles.txt
-    for (( j=0; j<len; j++ )); do
-        (( j == i )) && continue
-        echo "${items[i]}${items[j]}" >> .quartiles.txt
-        for (( k=0; k<len; k++ )); do
-            (( k == i || k == j )) && continue
-            echo "${items[i]}${items[j]}${items[k]}" >> .quartiles.txt
-	    for (( l=0; l<len; l++)); do
-		(( k == i || k == j || k ==l )) && continue
-		echo "${items[i]}${items[j]}${items[k]}${items[l]}" >> .quartiles.txt
-	    done
+# A set of words found.  This removes duplicates at insertion time.
+declare -A FOUND
+
+# Show arguments in groups of four so typos are easy to spot.
+for ((i=0; i<len/4; i++)); do
+    big=""
+    for ((j=0; j<4; j++)); do
+        index=$((i * 4 + j))
+        printf '%s' "${items[index],,}"
+        big+="${items[index]}"
+        ((j < 3)) && printf '-'
+    done
+
+    if [[ ${DICT[$big]+_} ]]; then
+        FOUND["$big"]=1
+    else
+        printf ' (not found)'
+    fi
+    printf '\n'
+done
+printf '%s\n' '=================='
+
+# Check candidates as they are generated.  No temporary candidate file is
+# needed, and FOUND suppresses words that can be made in more than one way.
+for ((i=0; i<len; i++)); do
+    a=${items[i]}
+
+    for ((j=0; j<len; j++)); do
+        ((j == i)) && continue
+        ab="$a${items[j]}"
+        [[ ${#ab} -ge 3 && ${DICT[$ab]+_} ]] && FOUND["$ab"]=1
+
+        for ((k=0; k<len; k++)); do
+            ((k == i || k == j)) && continue
+            abc="$ab${items[k]}"
+            [[ ${DICT[$abc]+_} ]] && FOUND["$abc"]=1
+
+            for ((l=0; l<len; l++)); do
+                ((l == i || l == j || l == k)) && continue
+                abcd="$abc${items[l]}"
+                [[ ${DICT[$abcd]+_} ]] && FOUND["$abcd"]=1
+            done
         done
     done
 done
 
-touch .q
-while read -r word; do
-    [[ ${#word} -lt 3 ]] && continue
-    wordu="${word^^}"
-
-    if in_dict "$word"; then
-        echo "$word"
-    fi
-done < .quartiles.txt >> .q
-
-sort -u .q | tr '[:upper:]' '[:lower:]' > .quartiles.txt
-rm .q
-echo "$(echo $(cat .quartiles.txt | wc -l)) words found."
-cat .quartiles.txt
+# Sort only the actual matches, not every generated candidate.
+mapfile -t words < <(printf '%s\n' "${!FOUND[@]}" | LC_ALL=C sort)
+printf '%d words found.\n' "${#words[@]}"
+printf '%s\n' "${words[@],,}"

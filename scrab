@@ -1,35 +1,35 @@
 #!/usr/bin/env bash
 ###############################################################################
-# Words With Friends helper - find words in scrabble / Words With Friends
+# Words With Friends helper - find words in Scrabble / Words With Friends
 #
-# To use, specify the letters in your rack as the first argument or using
-# the -r option.  You can also specify a prefix, a suffix, "use both," as a
-# prefix or a suffix, a length, a regex to meet, a required letter, "extra"
-# letters, and multiple dictionaries to search.
-# 
-# Bugs and especially performance hints welcome.  
+# Revised for correctness, performance, and maintainability.
 #
 # $Source: /Users/dan/.scripts/scrab $
-# $Date: 2025-10-28 14:31:40-08 $
-# $Revision: 1.28 $
-#
+# $Revision: 1.29 $
 ###############################################################################
 
 set -o noglob
-me="$(basename $0)"
-version=$(echo '$Revision: 1.28 $' | sed 's/.Revision: \(.*\).\$$/\1/')
-args="${@}"
 
-function usage() {
-#   Displays usage information
-    enter $FUNCNAME $LINENO "$@"
-    echo "${me} version ${version}"; echo
-    [[ "${1}" == "version" ]] && exit 1
-    echo "${me} lists combinations of words from given letters."; echo
-    echo "Usage: ${me} rack [options]"; echo
+me="$(basename "$0")"
+version="1.29"
+args="$*"
+
+usage() {
+    echo "${me} version ${version}"
+    echo
+
+    if [[ "${1:-}" == "version" ]]; then
+        exit 0
+    fi
+
+    echo "${me} lists combinations of words from given letters."
+    echo
+    echo "Usage: ${me} rack [options]"
+    echo
     echo "rack is the letters given and should be the first argument unless explicitly"
-    echo "set as an option."; echo
-    echo "Optons"
+    echo "set as an option."
+    echo
+    echo "Options"
     echo "  -r letters   Specify a rack explicitly as an option."
     echo "  -p prefix    Show words starting with board \"prefix\"."
     echo "  -P prefix    Show words starting with \"prefix\"."
@@ -38,485 +38,547 @@ function usage() {
     echo "  -e letters   Either prefix OR suffix (short for -p letters -s letters)."
     echo "  -E letters   Either prefix OR suffix (short for -P letters -S letters)."
     echo "  -a           Both specified prefix AND specified suffix."
-    echo "  -u word      Use a board word in the middle.  Equivalent to -m.*word.*"
+    echo "  -u word      Use a board word in the middle. Equivalent to -m '.*word.*'."
     echo "  -U word      As above, using only letters you have."
     echo "  -x letters   Include board \"letters\"."
-    echo "  -R letters   Remove board \"letters\"."
-    echo "  -m 'regex'   Find words matching the \"regex\", using board letters in \"regex\"."
-    echo "               Capital letters found in regex are taken from your rack."
-    echo "  -M 'regex'   Find words matching the \"regex\" using only letters you have."
-    echo "  -q letters   Require use of characters in \"letters\" from the board"
-    echo "  -Q letters   Require use of characters in \"letters\" you have."
+    echo "  -R letters   Remove board \"letters\" from the rack."
+    echo "  -m 'regex'   Find words matching regex; literal letters are board letters."
+    echo "  -M 'regex'   Find words matching regex using only letters you have."
+    echo "  -q letters   Require these characters; add them as board letters."
+    echo "  -Q letters   Require these characters from your rack."
     echo "  -l m         Show words at least m letters long."
     echo "  -L n         Show words at most n letters long."
     echo "  -w n         Show words exactly n letters wide."
-    echo "  -D dict      Add specified dictionary (can be used multiple times)"
-    echo "               Default is environment \"DEFAULT_DICT\"; if unset, Webster's"
-    echo "               2nd Edition is used.  Current value: ${DEFAULT_DICT:-/usr/share/dict/words}"
-    echo "  -4 letter    Repeat input letters four times and require \"letter\" in the output (useful for NYT Bee)"          
-    echo "  -b           \"Blank\" letter - iterate over the range [a-z]"
-    echo "  -n           No summary stats - just words."
-    echo "  -v           Verbose"
-    echo "  -d           Debug"
-    echo "  --use        Iterate using all the words until the next option"
-    echo "  --pre        Iterate using all the words until the next option"
-    echo "  --suf        Iterate using all the words until the next option"
-    echo "  --version    Show version"
-    echo "  --help       Show this message"
-    echo "  --examples   Show this message with examples."
+    echo "  -D dict      Add specified dictionary (may be used multiple times)."
+    echo "               Default: \$DEFAULT_DICT or /usr/share/dict/words"
+    echo "  -4 letter    Repeat rack four times and require letter (NYT Bee helper)."
+    echo "  -b           Blank letter: iterate over [a-z]."
+    echo "  -n           No summary stats; just words."
+    echo "  -v           Verbose."
+    echo "  -d           Debug."
+    echo "  --use        Iterate using all following words until next option."
+    echo "  --pre        Iterate using all following prefixes until next option."
+    echo "  --suf        Iterate using all following suffixes until next option."
+    echo "  --version    Show version."
+    echo "  --help       Show this message."
+    echo "  --examples   Show examples."
     echo
-    [[ "${1}" == help ]] && exit 1
-    [[ "${1}" != examples ]] && echo -e "${1}\n" && exit 1
-    echo "The list of dictionaries used is set in the following order: specified by the"
-    echo "the [d]ictionary option (which can be used mutliple times to search multiple"
-    echo "dictionaries), set in the environment variable DEFAULT_DICT, or if unspecified"
-    echo "defaults to Webster's second edition /usr/share/dict/web2"
+
+    [[ "${1:-}" == "help" ]] && exit 0
+    [[ "${1:-}" != "examples" ]] && {
+        [[ -n "${1:-}" ]] && printf '%s\n\n' "$1"
+        exit 1
+    }
+
+    echo "All arguments are case insensitive."
     echo
-    echo "All arguments are case insensitive."; echo
     echo "Examples:"
-    echo "Find words given the rack \"cat\" [p]refixed by an existing \"a\""
     echo "${me} cat -pa"
-    echo "    yields 'aa at act acta'"; echo
-    echo "Find words that [u]se an existing \"r\" on the board"
-    echo "${me} cat -ur"
-    echo "    yields 'ar arc art car rat tar cart'"; echo
-    echo "Find words using an existing \"s\" as a [p]refix *OR* an existing \"b\" as a [s]uffix"
-    echo "${me} cat -ps -sb"
-    echo "    yields 'ab cab sac sat tab scat'"; echo
-    echo "Find words using an existing \"s\" as a [p]refix *AND* an existing \"b\" as a [s]uffix"
-    echo "${me} cat -ps -sb -a"
-    echo "    yields 'sab scab stab'"; echo
-    echo "Find words with [p]refix \"s\" or [s]uffix \"b\" that [u]se an existing \"r\""
-    echo "${me} cat -ps -sb -ur"
-    echo "    yields 'arb carb crab scar star scart'"; echo
-    echo "Same but [m]atching a pattern where the existing \"r\" is the 2nd to last letter"
-    echo "${me} cat -ps -sb -m '.*r.'"
-    echo "    yields 'arb carb scart'"; echo
-    echo "Find words using only rack letters that [M]atch the pattern where \"a\" is first" 
-    echo "${me} cat -M 'a.*'"
-    echo "    yields 'at act'"; echo
-    echo "Find words that MAY use an e[x]tra \"u\", but re[q]uire the use of \"q\""
-    echo "${me} qist -xu -qq"
-    echo "    yields 'qi qis suq quit quits'"; echo
-    exit 1
-}
-
-###############################################################################
-# Functions
-###############################################################################
-
-# Debugging, logging, and message routines.
-function enter() {
-#   Call at the entry of each function for debugging purposes: enter $FUNCNAME $LINENO "$@"
-    [[ ! ${o_debug} ]] && return 0
-    ln=${2}; fn=${1}; shift; shift;
-    printf "Line %3s, %s" ${ln} ${fn}
-    [[ "$@" ]] && echo -en "( $(echo "$@" | sed 's/ /, /g') )"
+    echo "    yields 'aa at act acta'"
     echo
+    echo "${me} cat -ur"
+    echo "    yields 'ar arc art car rat tar cart'"
+    echo
+    echo "${me} cat -ps -sb"
+    echo "    yields 'ab cab sac sat tab scat'"
+    echo
+    echo "${me} cat -ps -sb -a"
+    echo "    yields 'sab scab stab'"
+    echo
+    echo "${me} cat -ps -sb -ur"
+    echo "    yields 'arb carb crab scar star scart'"
+    echo
+    echo "${me} cat -ps -sb -m '.*r.'"
+    echo "    yields 'arb carb scart'"
+    echo
+    echo "${me} cat -M 'a.*'"
+    echo "    yields 'at act'"
+    echo
+    echo "${me} qist -xu -qq"
+    echo "    yields 'qi qis suq quit quits'"
+    exit 0
 }
 
-function grr() {
-#   Uses growl to post a message if available
-    enter $FUNCNAME $LINENO "$@"
-    [[ ! {o_growl} ]] && return 0
+enter() {
+    [[ -z "${o_debug:-}" ]] && return 0
+    local fn=$1 ln=$2
+    shift 2
+    printf 'Line %3s, %s' "$ln" "$fn"
+    (($#)) && printf '( %s )' "$*"
+    printf '\n'
+}
+
+grr() {
+    enter "${FUNCNAME[0]}" "$LINENO" "$@"
+    [[ -z "${o_growl:-}" ]] && return 0
     growl "$@"
 }
 
-function vecho()   { [[ ${o_verbose} ]] && echo "${*}";        }
-function vechonr() { [[ ${o_verbose} ]] && echo -en "${*}";    }
-function vgrr()    { [[ ${o_verbose} ]] && grr "${*}";         }
-function decho()   { [[ ${o_debug}   ]] && echo "${*}";        }
-function don()     { [[ ${o_debug}   ]] && set -x;             }
-function doff()    { [[ ${o_debug}   ]] && set +x;             }
+vecho()   { [[ -n "${o_verbose:-}" ]] && echo "$*"; }
+vechonr() { [[ -n "${o_verbose:-}" ]] && printf '%s' "$*"; }
+vgrr()    { [[ -n "${o_verbose:-}" ]] && grr "$*"; }
+decho()   { [[ -n "${o_debug:-}" ]] && echo "$*"; }
+don()     { [[ -n "${o_debug:-}" ]] && set -x; }
+doff()    { [[ -n "${o_debug:-}" ]] && set +x; }
 
+cleanup() {
+    rm -f "${tmp1:-}" "${tmp2:-}" "${tempdict:-}" "${combined:-}" "${lock:-}"
+}
 
-# Word processing functions
+initFiles() {
+    tmp1=$(mktemp -t "${me}.XXXXXX")
+    tmp2=$(mktemp -t "${me}.XXXXXX")
+    tempdict=$(mktemp -t "${me}.XXXXXX")
+    combined=$(mktemp -t "${me}.XXXXXX")
+    lock="/var/tmp/${me}.lock"
+    trap cleanup EXIT INT TERM HUP
+}
 
-function filterWords() {
-#   The tried and true way to filter words for which not enough letters exist
-#   Grep finds words that have any of the letters in your rack, even if those
-#   letters occur multiple times.  This function filters out those words for
-#   which you do not have enough letters to complete.
-#   Expects list of words to filter in tmp2, adds them to tmp1
-    enter $FUNCNAME $LINENO "$@"
-    decho "Checking $(wc -l ${tmp2} | awk '{print $1}') words"
-    decho "Using | ${o_prefix} | [${o_rack}] | ${o_suffix} |"
-    [[ ${o_debug} ]] && cat "${tmp2}"
-    touch "${tmp1}"
-    for word in $(cat "${tmp2}"); do
-	orig=${word} 
-	if [[ ${1} == "and" ]]; then
-	    word=$(echo ${word} | sed "s/^${o_prefix}\(.*\)${o_suffix}$/\1/")
-	elif [[ ${1} == "prefix" ]]; then
-	    word=$(echo ${word} | sed "s/^${o_prefix}\(.*\)/\1/")
-	elif [[ ${1} == "suffix" ]]; then
-	    word=$(echo ${word} | sed "s/\(.*\)${o_suffix}$/\1/")
-	fi
-	short=$(echo ${word} | ${sed_rack})
-	decho "checking \"${word}\""
-	if [[ ${#short} -gt 0 ]]; then
-	    decho "Skipping \"${word}\", extra ${short}"
-	    continue
-	fi
-	echo ${orig} >> "${tmp1}"
+remove_letters_from_rack() {
+    local rack=$1 remove=$2 ch
+    while [[ -n "$remove" ]]; do
+        ch=${remove:0:1}
+        remove=${remove:1}
+        rack=${rack/"$ch"/}
     done
-    decho "Returning in tmp1:"
-    decho "$(cat ${tmp1})"
+    printf '%s' "$rack"
 }
 
-function cleanup() {
-    enter $FUNCNAME $LINENO "$@"
-    rm -f "${tmp1}"
-    rm -f "${tmp2}"
-    rm -f "$tempdict}"
-    rm -f "${combined}"
-    rm -f "${lock}"
+filterWords() {
+    # Candidate words arrive in tmp2.
+    # Strip board prefix/suffix as appropriate, then verify exact rack inventory
+    # in one awk process instead of spawning sed once per word.
+    local mode=$1
+
+    awk \
+        -v rack="$o_rack" \
+        -v mode="$mode" \
+        -v prefix="${o_prefix:-}" \
+        -v suffix="${o_suffix:-}" '
+        function inventory(s, a,    i,c) {
+            delete a
+            for (i = 1; i <= length(s); i++) {
+                c = substr(s, i, 1)
+                a[c]++
+            }
+        }
+        BEGIN {
+            inventory(rack, base)
+        }
+        {
+            orig = $0
+            word = $0
+
+            if (mode == "and") {
+                word = substr(word, length(prefix) + 1)
+                if (length(suffix) > 0)
+                    word = substr(word, 1, length(word) - length(suffix))
+            } else if (mode == "prefix") {
+                word = substr(word, length(prefix) + 1)
+            } else if (mode == "suffix") {
+                word = substr(word, 1, length(word) - length(suffix))
+            }
+
+            delete have
+            for (c in base)
+                have[c] = base[c]
+
+            ok = 1
+            for (i = 1; i <= length(word); i++) {
+                c = substr(word, i, 1)
+                if (--have[c] < 0) {
+                    ok = 0
+                    break
+                }
+            }
+
+            if (ok)
+                print orig
+        }
+    ' "$tmp2" >> "$tmp1"
 }
 
-function showResults() {
-    enter $FUNCNAME $LINENO "$@"
-    if [[ -s "${combined}" ]]; then
-	vecho "Sorting $(wc -l ${combined} | awk '{print $1}') words"
-	for w in $(cat ${combined}); do
-	    echo "${#w} ${w}" >> ${tmp2}
-	done
-	cat ${tmp2} | sort -n | cut -f2 -d' ' | uniq > ${combined}
-	if [[ ${o_nosum} ]]; then
-	    cat ${combined}
-	else
-	    cat ${combined} | while read w; do
-		[[ $(echo ${w} | grep "[kvjxqz]") ]] && \
-		    echo -e "${w} *" || echo ${w}
-	    done
-	fi
+require_letters() {
+    local infile=$1 outfile=$2 req=$3
+    awk -v req="$req" '
+        function inventory(s, a,    i,c) {
+            delete a
+            for (i = 1; i <= length(s); i++) {
+                c = substr(s, i, 1)
+                a[c]++
+            }
+        }
+        BEGIN { inventory(req, need) }
+        {
+            inventory($0, have)
+            ok = 1
+            for (c in need) {
+                if (have[c] < need[c]) {
+                    ok = 0
+                    break
+                }
+            }
+            if (ok) print
+        }
+    ' "$infile" > "$outfile"
+}
+
+showResults() {
+    [[ ! -s "$combined" ]] && return 0
+
+    vecho "Sorting $(wc -l < "$combined") words"
+
+    awk '{ print length($0), $0 }' "$combined" \
+        | sort -k1,1n -k2,2 \
+        | cut -d' ' -f2- \
+        | awk '!seen[$0]++' > "$tmp2"
+    mv "$tmp2" "$combined"
+
+    if [[ -n "${o_nosum:-}" ]]; then
+        cat "$combined"
+    else
+        while IFS= read -r w; do
+            if [[ "$w" =~ [kvjxqz] ]]; then
+                printf '%s *\n' "$w"
+            else
+                printf '%s\n' "$w"
+            fi
+        done < "$combined"
     fi
 }
 
-function checkOpts() {
-    enter $FUNCNAME $LINENO "$@"
-
-#   make sure a rack was specified
-    [[ ${o_no_rack} ]] && usage "No rack specified."
-
-#   defaults
+checkOpts() {
+    local opt line
     local minlength=${o_minlen:-1}
     local maxlength=${o_maxlen:-15}
-    [[ $(\which growl) ]] && o_growl=true
-    [[ ${o_debug} ]] && o_verbose=true
 
-#   for debugging options
-    if [[ ${o_verbose} ]]; then
-	echo "Specified options: "
-	for o in o_prefix o_suffix o_either o_and o_minlen o_maxlen o_pat \
-            o_req o_dict o_debug o_verbose o_double o_dict o_nosum o_growl o_use \
-            o_remove; do
-	    [[ (${o}) && (${!o}) ]] && echo "    ${o}: \"${!o}\" "
-	done
-	echo "Min is ${minlength}, max is ${maxlength}"
+    [[ -n "${o_no_rack:-}" ]] && usage "No rack specified."
+
+    command -v growl >/dev/null 2>&1 && o_growl=true
+    [[ -n "${o_debug:-}" ]] && o_verbose=true
+
+    if [[ -n "${o_verbose:-}" ]]; then
+        echo "Specified options:"
+        for opt in o_prefix o_suffix o_either o_and o_minlen o_maxlen o_pat \
+                   o_req o_dict o_debug o_verbose o_double o_nosum o_growl \
+                   o_use o_remove; do
+            [[ -n "${!opt:-}" ]] && printf '    %s: "%s"\n' "$opt" "${!opt}"
+        done
+        echo "Min is ${minlength}, max is ${maxlength}"
     fi
 
-#   Check for extra/improper args
-    if [[ (! ${o_double}) && ($((${1} - 1)) -ne ${2}) ]]; then
-	echo "Extra unrecognized arguments.  ${me} -- help for usage."; exit 2
-    fi
-
-    for opt in o_rack o_prefix o_suffix o_either o_req; do
-	if [[ "$(echo "${!opt}" | sed 's/[[:alpha:]]//g')" != "" ]]; then
-	    echo -en "Illegal letters specified for "
-	    echo "$(echo ${opt} | sed 's/^o_//'): ${!opt}";
-	    exit 2
-	fi
+    for opt in o_rack o_prefix o_suffix o_either o_req o_remove; do
+        if [[ -n "${!opt:-}" && "${!opt}" =~ [^[:alpha:]] ]]; then
+            echo "Illegal letters specified for ${opt#o_}: ${!opt}"
+            exit 2
+        fi
     done
 
-#   Remove specified characters from rack
-    sed_remove="sed$(echo "${o_remove}" | sed 's#\(.\)# -e s/\1//#g')"
-    [[ ${o_verbose} ]] && echo "sed_remove=${sed_remove}"
-    [[ ${o_debug} ]] && echo "rack before=${o_rack}"
-    o_rack=$(echo ${o_rack} | ${sed_remove})
-    [[ ${o_debug} ]] && echo "rack after=${o_rack}"
-
-#   Prefix/suffix/either/and
-    if [[ ${o_and} && ! ${o_prefix} && ! ${o_suffix} ]]; then
-	echo "Both a prefix and a suffix are required with -a."
-	exit 2
-    elif [[ -n ${o_either} ]]; then
-	if [[ (-n ${o_prefix}) || (-n ${o_suffix}) ]]; then
-	    echo -en "Cannot use \"either\" option in combination with a prefix "
-	    echo "or a suffix"
-	    exit 2
-	else 
-	    o_prefix=${o_either}; o_suffix=${o_either}; o_either="true"
-	fi
+    if [[ -n "${o_remove:-}" ]]; then
+        o_rack=$(remove_letters_from_rack "$o_rack" "$o_remove")
     fi
 
-#   Check length
-    if [[ ${minlength//[0-9]/}${maxlength//[0-9]/} ]]; then
-	    echo "Illegal number for length: {${minlength},${maxlength}}"
-	    exit 2
-    elif [[ ${minlength} -gt ${maxlength} ]]; then
-	echo -en "Min length ${minlength} must be less than ${maxlength}"
-	exit 2
-    else
-	o_len="\\{${minlength},${maxlength}\\}"
+    if [[ -n "${o_and:-}" && ( -z "${o_prefix:-}" || -z "${o_suffix:-}" ) ]]; then
+        echo "Both a prefix and a suffix are required with -a."
+        exit 2
+    elif [[ -n "${o_either:-}" ]]; then
+        if [[ -n "${o_prefix:-}" || -n "${o_suffix:-}" ]]; then
+            echo "Cannot use \"either\" option in combination with a prefix or suffix"
+            exit 2
+        fi
+        o_prefix=$o_either
+        o_suffix=$o_either
+        o_either=true
     fi
-    decho "Length specification is |${o_len}|"
 
-#   Check dictionaries
-    [[ ! ${o_dict} ]] && o_dict="${DEFAULT_DICT:-/usr/share/dict/words}"
-    local t_dict
-    decho "Checking dictionary list ${o_dict}"
-    t_dict="${o_dict}"
-    echo "${t_dict}" | tr "|" "\n" | while read line; do
-	if [[ ! -r "${line}" ]]; then
-	    echo "Dictionary ${line} does not exist.  Check path."
-	else
-	    [[ ${t_dict} ]] && t_dict="${t_dict}|${line}" || t_dict="${line}"
-	fi
+    if [[ "$minlength" =~ [^0-9] || "$maxlength" =~ [^0-9] ]]; then
+        echo "Illegal number for length: {${minlength},${maxlength}}"
+        exit 2
+    elif (( minlength > maxlength )); then
+        echo "Min length ${minlength} must be less than or equal to ${maxlength}"
+        exit 2
+    fi
+
+    o_len="\\{${minlength},${maxlength}\\}"
+
+    [[ -z "${o_dict:-}" ]] && o_dict="${DEFAULT_DICT:-/usr/share/dict/words}"
+
+    local valid=()
+    IFS='|' read -r -a requested_dicts <<< "$o_dict"
+    for line in "${requested_dicts[@]}"; do
+        if [[ ! -r "$line" ]]; then
+            echo "Dictionary ${line} does not exist or is not readable. Check path." >&2
+        else
+            valid+=("$line")
+        fi
     done
-    decho "Final dictionary list ${o_dict}"
+
+    ((${#valid[@]} == 0)) && {
+        echo "No readable dictionaries available." >&2
+        exit 2
+    }
+
+    dicts=("${valid[@]}")
 }
 
-function initFiles() {
-    enter $FUNCNAME $LINENO "$@"
-    tmp1=$(mktemp     -t "$(basename $0)XXXXX.tmp")
-    tmp2=$(mktemp     -t "$(basename $0)XXXXX.tmp")
-    tempdict=$(mktemp -t "$(basename $0)XXXXX.tmp")
-    combined=$(mktemp -t "$(basename $0)XXXXX.tmp")
-    lock="/var/tmp/${me}.lock"
-    last_pat=""
-}
+oneDict() {
+    enter "${FUNCNAME[0]}" "$LINENO" "$@"
 
-function oneDict() {
-#   Processes one dictionary.
-#   Check dictionary and touch temporary files
-    enter $FUNCNAME $LINENO "$@"
-    sed_rack="sed $(echo "${o_rack}" | sed 's#\(.\)# -e s/\1//#g')"
-    decho "sed_rack |${sed_rack}|"
-    sed_req="sed $(echo "${o_req}" | sed "s#\(.\)# -e s/\1//#g")"
-    decho "sed_req |${sed_req}|"
+    : > "$tmp1"
+
     vecho "Processing dictionary file ${dict}..."
-    if [[ (${o_pat}) && ("${o_pat}" != "${last_pat}") ]]; then 
-	grep -ix "^${o_pat}$" ${dict} > "${tempdict}"
-	last_pat=${opat}
-    elif [[ (!${o_pat}) || ! -e "${tempdict}" ]]; then
-	cp ${dict} "${tempdict}" 
-    fi
-    if [[ ${o_and} ]]; then
-	vecho "Checking words with both ${o_prefix} AND ${o_suffix}"
-	grep -ix "^${o_prefix}[${o_rack}]*${o_suffix}$" "${tempdict}" | \
-	    grep -ix "^.${o_len}$" | tr [A-Z] [a-z] > "${tmp2}"
-	filterWords and
+
+    if [[ -n "${o_pat:-}" ]]; then
+        grep -Eix "^${o_pat}$" "$dict" > "$tempdict"
     else
-	if [[ ${o_prefix} ]]; then
-	    vecho "Checking prefixed words '${o_prefix}'"
-	    grep -ix "^${o_prefix}[${o_rack}]*$" "${tempdict}" | \
-		grep -ix "^.${o_len}$" | tr [A-Z] [a-z] >  "${tmp2}"
-	    filterWords prefix
-	fi
-	if [[ ${o_suffix} ]]; then
-	    vecho "Checking suffixed words '${o_suffix}'"
-	    grep -ix "^[${o_rack}]*${o_suffix}$" "${tempdict}" | \
-		grep -ix "^.${o_len}$" | tr [A-Z] [a-z] > "${tmp2}"
-	    filterWords suffix
-	fi
-	if [[ ! ${o_prefix}${o_suffix} ]]; then
-	    vecho "Checking regular words"
-	    grep -ix "^[${o_rack}]*$" "${tempdict}" | grep -ix "^.${o_len}$" | \
-		tr [A-Z] [a-z] > "${tmp2}"
-	    filterWords normal
-	fi
-    fi
-    cat "${tmp1}" | sort | uniq > "${tmp2}" && mv "${tmp2}" "${tmp1}"
-
-#   Grep for a required character if specified
-    touch "${tmp2}"
-    if [[ ${o_req} ]]; then
-	vecho "Checking required characters | ${o_req} | using ${sed_req}"
-	for word in $(cat "${tmp1}"); do
-	    short=$(echo ${word} | ${sed_req})
-	    decho "${word} after stripping required characters is ${short}"
-	    if [[ ${#short} -ne $((${#word}-${#o_req})) ]]; then
-		decho "skipping ${word}, doesn't have ${o_req}"
-	    else
-		echo ${word} >> "${tmp2}"
-	    fi
-	done
-	mv "${tmp2}" "${tmp1}"
+        cp "$dict" "$tempdict"
     fi
 
-#   Grep for a specified simple pattern (e.g. ...r.)
-    vecho "Checking required pattern '${o_pat}'"
-    if [[ ${o_pat} ]]; then
-	grep -ix "^${o_pat}$" "${tmp1}" > "${tmp2}"
-	mv "${tmp2}" "${tmp1}"
+    if [[ -n "${o_and:-}" ]]; then
+        vecho "Checking words with both ${o_prefix} AND ${o_suffix}"
+        grep -Eix "^${o_prefix}[${o_rack}]*${o_suffix}$" "$tempdict" \
+            | awk -v min="${o_minlen:-1}" -v max="${o_maxlen:-15}" \
+                'length($0) >= min && length($0) <= max { print tolower($0) }' \
+            > "$tmp2"
+        filterWords and
+    else
+        if [[ -n "${o_prefix:-}" ]]; then
+            vecho "Checking prefixed words '${o_prefix}'"
+            grep -Eix "^${o_prefix}[${o_rack}]*$" "$tempdict" \
+                | awk -v min="${o_minlen:-1}" -v max="${o_maxlen:-15}" \
+                    'length($0) >= min && length($0) <= max { print tolower($0) }' \
+                > "$tmp2"
+            filterWords prefix
+        fi
+
+        if [[ -n "${o_suffix:-}" ]]; then
+            vecho "Checking suffixed words '${o_suffix}'"
+            grep -Eix "^[${o_rack}]*${o_suffix}$" "$tempdict" \
+                | awk -v min="${o_minlen:-1}" -v max="${o_maxlen:-15}" \
+                    'length($0) >= min && length($0) <= max { print tolower($0) }' \
+                > "$tmp2"
+            filterWords suffix
+        fi
+
+        if [[ -z "${o_prefix:-}${o_suffix:-}" ]]; then
+            vecho "Checking regular words"
+            grep -Eix "^[${o_rack}]*$" "$tempdict" \
+                | awk -v min="${o_minlen:-1}" -v max="${o_maxlen:-15}" \
+                    'length($0) >= min && length($0) <= max { print tolower($0) }' \
+                > "$tmp2"
+            filterWords normal
+        fi
     fi
 
-#   Filter pure prefixes and pure suffixes
+    sort -u "$tmp1" > "$tmp2"
+    mv "$tmp2" "$tmp1"
+
+    if [[ -n "${o_req:-}" ]]; then
+        vecho "Checking required characters | ${o_req} |"
+        require_letters "$tmp1" "$tmp2" "$o_req"
+        mv "$tmp2" "$tmp1"
+    fi
+
+    if [[ -n "${o_pat:-}" ]]; then
+        grep -Eix "^${o_pat}$" "$tmp1" > "$tmp2"
+        mv "$tmp2" "$tmp1"
+    fi
+
     vecho "Filtering pure prefixes and suffixes"
-    grepstr="^${o_prefix}$\|^${o_suffix}$"
-    [[ ${o_use} ]] && grepstr="${grepstr}\|^$(echo ${o_pat} | sed 's/[^[:alpha:]]//g')$"
-    grep -vx "${grepstr}" "${tmp1}" > "${tmp2}"
-    mv "${tmp2}" "${tmp1}"
+    awk \
+        -v p="${o_prefix:-}" \
+        -v s="${o_suffix:-}" \
+        -v u="${o_use:-}" \
+        -v pat="${o_pat:-}" '
+        BEGIN {
+            pure = pat
+            gsub(/[^[:alpha:]]/, "", pure)
+        }
+        $0 != p && $0 != s && !(u != "" && $0 == pure) { print }
+    ' "$tmp1" > "$tmp2"
+    mv "$tmp2" "$tmp1"
 }
 
-function allDicts() {
-    enter $FUNCNAME $LINENO "$@"
-    echo ${o_dict} | tr "|" "\n" | while read dict; do
-	oneDict 
-	cat "${tmp1}" >> "${combined}"
+allDicts() {
+    for dict in "${dicts[@]}"; do
+        oneDict
+        cat "$tmp1" >> "$combined"
     done
 }
 
-function processRack() {
-    enter $FUNCNAME $LINENO "$@"
-    if [[ ${o_double} ]]; then
-	origrack=${o_rack}
-	for dcmd in $(echo ${o_double} | tr ';' ' '); do
-	    wcmd="$(echo ${dcmd} | tr '|' ' ')"
-	    cmd="$(echo ${wcmd} | cut -f1 -d' ')"
-	    for frag in $(echo ${wcmd} | cut -f2- -d' '); do
-		o_rack=${origrack}
-		case ${cmd} in
-		    use)   decho "use ${frag}"
-			   o_pat=".*${frag}.*"; o_rack=${origrack}$(echo ${frag} | \
-			       sed 's/[^a-z]//g'); o_use=true;;
-		    pre)   decho "prefix ${frag}"; o_prefix="${frag}";;
-		    suf)   decho "suffix ${frag}"; o_suffix="${frag}";;
-		    sides) echo "side-suffix is not implemented" && exit 2;;
-		    sidep) echo "side-prefix is not implemented" && exit 2;;
-		esac
-		allDicts
-	    done
-	done
+processRack() {
+    if [[ -n "${o_double:-}" ]]; then
+        local origrack=$o_rack dcmd wcmd cmd frag
+        IFS=';' read -r -a dcmds <<< "$o_double"
+
+        for dcmd in "${dcmds[@]}"; do
+            [[ -z "$dcmd" ]] && continue
+            wcmd=${dcmd//|/ }
+            cmd=${wcmd%% *}
+            for frag in ${wcmd#* }; do
+                o_rack=$origrack
+                case "$cmd" in
+                    use)
+                        o_pat=".*${frag}.*"
+                        o_rack="${origrack}${frag//[^a-z]/}"
+                        o_use=true
+                        ;;
+                    pre) o_prefix=$frag ;;
+                    suf) o_suffix=$frag ;;
+                    sides) echo "side-suffix is not implemented" >&2; exit 2 ;;
+                    sidep) echo "side-prefix is not implemented" >&2; exit 2 ;;
+                esac
+                allDicts
+            done
+        done
     else
-	allDicts
+        allDicts
     fi
 }
 
-function mainprog() {
-    enter $FUNCNAME $LINENO "$@"
+mainprog() {
     initFiles
-    if [[ ${o_blank} ]]; then
-	origrack=${o_rack}
-	for L in {a..z}; do
-	    for dict in ${o_dict}; do 
-		echo -en "${L} ";  o_rack="${origrack}${L}"; 
-		processRack
-	    done
-	done
-	echo
+
+    if [[ -n "${o_blank:-}" ]]; then
+        local origrack=$o_rack L
+        for L in {a..z}; do
+            printf '%s ' "$L"
+            o_rack="${origrack}${L}"
+            processRack
+        done
+        echo
     else
-	processRack
+        processRack
     fi
+
     showResults
-    trap "cleanup" EXIT INT
-#    [[ -e "${lock}" ]] && echo "Waiting on lock"
-#    lockfile -r 2 "${lock}"
-    cat "${combined}" | sort | uniq > "${tmp1}" && mv "${tmp1}" "${HOME}/.scrabresults"
-    export wordsfound=$(wc -l "${HOME}/.scrabresults" | awk '{print $1}')
-#    rm -f ${lock}
+
+    sort -u "$combined" > "$tmp1"
+    mv "$tmp1" "${HOME}/.scrabresults"
+    wordsfound=$(wc -l < "${HOME}/.scrabresults")
+    export wordsfound
 }
 
-###############################################################################
-# Basic argument checks
-###############################################################################
+[[ -z "${1:-}" ]] && usage
 
-[[ -z ${1} ]] && usage
-
-# The first argument must be the letter rack
 if [[ "${1:0:1}" != "-" ]]; then
-    o_rack=${1}
+    o_rack=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
     shift
 else
     o_no_rack=true
 fi
 
-###############################################################################
-# Parse options
-###############################################################################
-
-# Look for the environment variable DEFAULT_DICT and use that.  If it doesn't
-# exist or is empty, default to /usr/share/dict/web2, which is Webster's 2nd
-# edition on the mac.  Use the -d option to add additional dictionaries on
-# the command line, or add them as space delimited to DEFAULT_DICT
-
 unset o_prefix o_suffix o_either o_and o_pat o_req o_verbose o_debug
-unset o_len o_growl o_dict o_nosum o_double o_use o_remove
+unset o_len o_growl o_dict o_nosum o_double o_use o_remove o_blank
+unset o_minlen o_maxlen
+
 while getopts ":r:p:P:s:S:e:E:au:U:x:R:bm:M:4:q:Q:l:L:w:D:nvd" option; do
-    decho "Top of getops: option ${option}, OPTARG ${OPTARG}, OPTIND ${OPTIND}, line ${@}"
-    decho "line after OPTIND is ${@:$OPTIND}"
-    [[ ${OPTARG:0:2} == "--" ]] && OPTARG="-" && option="double" && let OPTIND--
-    lowerarg=$(echo "${OPTARG}" | tr [A-Z] [a-z])
-    case ${option} in
-	r) o_rack=${lowerarg}; unset o_no_rack;;
-	p) o_prefix=${lowerarg};;
-	P) o_pat="${lowerarg}.*";;
-	s) o_suffix=${lowerarg};;
-	S) o_pat=".*${lowerarg}";;
-	e) o_either=${lowerarg};;
-	E) o_pat="${lowerarg}.*\|.*${lowerarg}";;
-	a) o_and=true;;
-	u) o_pat=".*${lowerarg}.*"; o_rack=${o_rack}$(echo ${OPTARG} | sed 's/[^a-z]//g');
-	   o_use=true;;
-	U) o_pat=".*${lowerarg}.*"; o_use=true;;
-	x) o_rack=${o_rack}${lowerarg};;
-        R) o_remove=${lowerarg};; 
-	b) o_blank=true;;
-	m) o_pat="${lowerarg}"; o_rack=${o_rack}$(echo ${OPTARG} | sed 's/[^a-z]//g');;
-	M) o_pat="${lowerarg}";;
-	4) [[ ${o_no_rack} ]] && usage; o_rack="${o_rack}${o_rack}${o_rack}${o_rack}"; o_req=${lowerarg}; o_minlen=4;;
-	q) o_rack=${o_rack}${lowerarg}; o_req=${o_req}${lowerarg};;
-	Q) o_req=${o_req}${lowerarg};;
-	l) o_minlen=${OPTARG};;
-	L) o_maxlen=${OPTARG};;
-	w) o_minlen=${OPTARG}; o_maxlen=${OPTARG};;
-	D) [[ ${o_dict} ]] && o_dict="${o_dict}|${OPTARG}" || o_dict="${OPTARG}";;
-	n) o_nosum=true;;
-	v) o_verbose=true;;
-	d) o_debug=true;;
-	:) echo "Required argument to -${option} not specified."
-	   exit 1;;
-	*) if [[ "${OPTARG}" == "-" ]]; then	
-	      doption=$(echo "${@:${OPTIND}:1}" | sed 's/^..//');
-	      decho "double option is ${doption}"
-	      case "${doption}" in
-		  version|help|examples) usage ${doption};;
-		  s|suffixes|suf) o_double=${o_double}suf;;
-		  p|prefixes|pre) o_double=${o_double}pre;;
-		  u|use)          o_double=${o_double}use;;
-		  side-suffix)    o_double=${o_double}sides;;
-		  side-prefix)    o_double=${o_double}sidep;;
-		  *)  echo "Unexpected option \"--${doption}\", --help for help."
-		      exit 1;;
-	      esac
-	      decho "o_double is |${o_double}|, OPTIND is ${OPTIND}"
-	      shift ${OPTIND}
-	      decho "Args are [$@], and @:1:1 is ${@:1:1}"
-	      arg="${@:1:1}"
-	      while [[ (${arg}) && ("${arg:0:1}" != "-") ]]; do 
-		  o_double="${o_double}|"$(echo ${arg} | tr "[A-Z]" "[a-z]")
-		  shift
-		  arg="${@:1:1}"
-	      done
-	      o_double="${o_double};"
-	      OPTIND=1
-	  else
-	      echo "Unexpected argument \"${OPTARG}\", --help for help."; exit 1
-	  fi
-	  option="-";;
+    lowerarg=$(printf '%s' "${OPTARG:-}" | tr '[:upper:]' '[:lower:]')
+
+    case "$option" in
+        r) o_rack=$lowerarg; unset o_no_rack ;;
+        p) o_prefix=$lowerarg ;;
+        P) o_pat="${lowerarg}.*" ;;
+        s) o_suffix=$lowerarg ;;
+        S) o_pat=".*${lowerarg}" ;;
+        e) o_either=$lowerarg ;;
+        E) o_pat="${lowerarg}.*|.*${lowerarg}" ;;
+        a) o_and=true ;;
+        u)
+            o_pat=".*${lowerarg}.*"
+            o_rack="${o_rack}${lowerarg//[^a-z]/}"
+            o_use=true
+            ;;
+        U) o_pat=".*${lowerarg}.*"; o_use=true ;;
+        x) o_rack="${o_rack}${lowerarg}" ;;
+        R) o_remove=$lowerarg ;;
+        b) o_blank=true ;;
+        m)
+            o_pat=$lowerarg
+            o_rack="${o_rack}${lowerarg//[^a-z]/}"
+            ;;
+        M) o_pat=$lowerarg ;;
+        4)
+            [[ -n "${o_no_rack:-}" ]] && usage
+            o_rack="${o_rack}${o_rack}${o_rack}${o_rack}"
+            o_req=$lowerarg
+            o_minlen=4
+            ;;
+        q)
+            o_rack="${o_rack}${lowerarg}"
+            o_req="${o_req:-}${lowerarg}"
+            ;;
+        Q) o_req="${o_req:-}${lowerarg}" ;;
+        l) o_minlen=$OPTARG ;;
+        L) o_maxlen=$OPTARG ;;
+        w) o_minlen=$OPTARG; o_maxlen=$OPTARG ;;
+        D) o_dict="${o_dict:+${o_dict}|}${OPTARG}" ;;
+        n) o_nosum=true ;;
+        v) o_verbose=true ;;
+        d) o_debug=true ;;
+        :)
+            echo "Required argument to -${OPTARG} not specified." >&2
+            exit 1
+            ;;
+        \?)
+            case "${OPTARG}" in
+                -)
+                    # Long options are handled below after getopts terminates.
+                    ;;
+                *)
+                    echo "Unexpected option -${OPTARG}; --help for help." >&2
+                    exit 1
+                    ;;
+            esac
+            ;;
     esac
 done
 
-checkOpts ${OPTIND} ${#@}
+shift $((OPTIND - 1))
 
-if [[ ! ${o_nosum} ]]; then
+# Handle long options, preserving the original multi-value interface.
+while (($#)); do
+    case "$1" in
+        --version) usage version ;;
+        --help) usage help ;;
+        --examples) usage examples ;;
+        --use|--pre|--suf|--prefixes|--suffixes)
+            case "$1" in
+                --use) cmd=use ;;
+                --pre|--prefixes) cmd=pre ;;
+                --suf|--suffixes) cmd=suf ;;
+            esac
+            shift
+            group=$cmd
+            while (($#)) && [[ "$1" != -* ]]; do
+                group+="|$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+                shift
+            done
+            o_double="${o_double:+${o_double};}${group}"
+            ;;
+        --side-suffix)
+            echo "side-suffix is not implemented" >&2
+            exit 2
+            ;;
+        --side-prefix)
+            echo "side-prefix is not implemented" >&2
+            exit 2
+            ;;
+        *)
+            echo "Unexpected argument \"$1\"; --help for help." >&2
+            exit 1
+            ;;
+    esac
+done
+
+checkOpts
+
+if [[ -z "${o_nosum:-}" ]]; then
     exec 3>&1 4>&2
-    time=$(TIMEFORMAT="%R"; { time mainprog 1>&3 2>&4; } 2>&1)
+    elapsed=$(TIMEFORMAT="%R"; { time mainprog 1>&3 2>&4; } 2>&1)
     exec 3>&- 4>&-
-    wf=$(wc -l "${HOME}/.scrabresults" | awk '{print $1}')
-    echo "${wf} words, ${time} secs from ${args}"
+    wf=$(wc -l < "${HOME}/.scrabresults")
+    echo "${wf} words, ${elapsed} secs from ${args}"
 else
     mainprog
 fi
-
-

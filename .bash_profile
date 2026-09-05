@@ -1055,7 +1055,7 @@ function symlink() {
 }
 
 function edit() {
-    for i in $@; do
+    for i in "$@"; do
 	if [[ ! -e "${i}" ]]; then
 	    read -p "Create new file ${i}? [y] " ans
 	    [[ (! ${ans}) || (${ans} == y) ]] && continue || return

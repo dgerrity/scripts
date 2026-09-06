@@ -1,0 +1,266 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+export LC_ALL=C
+
+PROGRAM=${0##*/}
+VERSION=1.0.0
+verbose=false
+mode=match
+declare -a requested_dicts=()
+
+usage() {
+    cat <<'EOF'
+Usage:
+  dict PATTERN
+  dict -e|--explore FRAGMENT
+  dict -l|--lookup WORD
+  dict -t|--translate LANG WORD_OR_PHRASE
+  dict [options]
+
+Find words, explore word fragments, or open definitions and translations.
+With no arguments, this help is shown.
+
+Options:
+  -h, --help              Show this help.
+      --version           Show the version. (-v is reserved for verbose.)
+  -v, --verbose           Show which dictionary file(s) are used.
+  -D, --dictionary FILE   Use FILE; repeat to combine word lists.
+  -e, --explore FRAGMENT  Analyze the literal fragment (case-insensitive).
+  -l, --lookup WORD       Open WORD in macOS Dictionary, or a web fallback.
+  -t, --translate LANG    Open Google Translate; LANG is an ISO 639-1 code.
+
+Dictionary selection:
+  -D takes priority. Otherwise DEFAULT_DICT is used; it may contain one path
+  or multiple paths separated by |. If neither is set, common Homebrew/local
+  word-list paths are tried before /usr/share/dict/words.
+
+Examples:
+  dict 'examp..'
+  dict -e que
+  dict -l example
+  dict -t es "good morning"
+  DEFAULT_DICT=/path/to/scrabble-words dict -e que
+
+PATTERN uses grep's basic regular expressions and must match the whole word.
+For compatibility, digits 1 through 5 expand to that many dots.
+Explore treats FRAGMENT literally and uses its first occurrence in each word
+when counting complete prefixes and suffixes. Translation requires a browser
+and internet access; no API key or text-translation service is embedded.
+EOF
+}
+
+die() {
+    printf '%s: %s\n' "$PROGRAM" "$*" >&2
+    exit 2
+}
+
+urlencode() {
+    local input=$1 output='' char='' hex i
+    for ((i = 0; i < ${#input}; i++)); do
+        char=${input:i:1}
+        case $char in
+            [A-Za-z0-9.~_-]) output+=$char ;;
+            *)
+                printf -v hex '%%%02X' "'$char"
+                output+=$hex
+                ;;
+        esac
+    done
+    printf '%s' "$output"
+}
+
+add_default_dicts() {
+    local old_ifs=$IFS
+    if [[ -n ${DEFAULT_DICT:-} ]]; then
+        IFS='|'
+        read -r -a requested_dicts <<< "$DEFAULT_DICT"
+        IFS=$old_ifs
+        return
+    fi
+
+    local candidate
+    for candidate in \
+        /opt/homebrew/share/dict/scrabble \
+        /opt/homebrew/share/dict/words \
+        /usr/local/share/dict/scrabble \
+        /usr/local/share/dict/words \
+        /usr/share/dict/words
+    do
+        if [[ -r $candidate ]]; then
+            requested_dicts=("$candidate")
+            return
+        fi
+    done
+}
+
+validate_dicts() {
+    local path
+    ((${#requested_dicts[@]})) || add_default_dicts
+    ((${#requested_dicts[@]})) || die 'no readable dictionary found; set DEFAULT_DICT or use -D FILE'
+    for path in "${requested_dicts[@]}"; do
+        [[ -n $path ]] || die 'dictionary path cannot be empty'
+        [[ -r $path && -f $path ]] || die "cannot read dictionary: $path"
+        $verbose && printf '%s: dictionary: %s\n' "$PROGRAM" "$path" >&2
+    done
+}
+
+expand_pattern() {
+    local pattern=$1 dots i
+    for ((i = 1; i <= 5; i++)); do
+        printf -v dots '%*s' "$i" ''
+        dots=${dots// /.}
+        pattern=${pattern//$i/$dots}
+    done
+    printf '%s' "$pattern"
+}
+
+match_words() {
+    local pattern
+    pattern=$(expand_pattern "$1")
+    cat "${requested_dicts[@]}" |
+        tr '[:upper:]' '[:lower:]' |
+        grep -x "$pattern" |
+        sort -u
+    local status=${PIPESTATUS[2]}
+    [[ $status -eq 1 ]] && return 0
+    return "$status"
+}
+
+explore_fragment() {
+    local fragment
+    fragment=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+    [[ -n $fragment ]] || die 'explore fragment cannot be empty'
+
+    awk -v fragment="$fragment" '
+    function label(s) { return s == "" ? "[boundary]" : s }
+    function ranked(title, values, total,    key,cmd) {
+        print ""
+        print title
+        cmd = "sort -k1,1nr -k2,2 | head -5"
+        for (key in values)
+            printf "%d\t%s\n", values[key], label(key) | cmd
+        close(cmd)
+    }
+    {
+        word = tolower($0)
+        sub(/\r$/, "", word)
+        if (seen[word]++ || (position = index(word, fragment)) == 0) next
+        total++
+        prefix = substr(word, 1, position - 1)
+        suffix = substr(word, position + length(fragment))
+        prefixes[prefix]++
+        suffixes[suffix]++
+        before[(prefix == "" ? "[start]" : substr(prefix, length(prefix), 1))]++
+        after[(suffix == "" ? "[end]" : substr(suffix, 1, 1))]++
+        if (prefix == "") begins++
+        if (suffix == "") ends++
+    }
+    END {
+        printf "Fragment: %s\n", fragment
+        printf "Matching words: %d\n", total
+        if (!total) exit
+        printf "Begin with fragment: %d (%.1f%%)\n", begins, 100 * begins / total
+        printf "End with fragment:   %d (%.1f%%)\n", ends, 100 * ends / total
+        ranked("Top complete prefixes (before first occurrence):", prefixes, total)
+        ranked("Top complete suffixes (after first occurrence):", suffixes, total)
+        ranked("Immediate preceding characters:", before, total)
+        ranked("Immediate following characters:", after, total)
+    }
+    ' "${requested_dicts[@]}"
+}
+
+open_url() {
+    local url=$1
+    if command -v open >/dev/null 2>&1; then
+        open "$url"
+    elif command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "$url"
+    else
+        printf '%s\n' "$url"
+    fi
+}
+
+lookup_word() {
+    local encoded
+    encoded=$(urlencode "$1")
+    if [[ $(uname -s) == Darwin ]] && command -v open >/dev/null 2>&1; then
+        open "dict://$encoded" || open_url "https://www.dictionary.com/browse/$encoded"
+    else
+        open_url "https://www.dictionary.com/browse/$encoded"
+    fi
+}
+
+translate_text() {
+    local language=$1 text=$2 encoded
+    [[ $language =~ ^[A-Za-z][A-Za-z]$ ]] || die 'translation language must be a two-letter ISO 639-1 code (for example, es)'
+    language=$(printf '%s' "$language" | tr '[:upper:]' '[:lower:]')
+    encoded=$(urlencode "$text")
+    open_url "https://translate.google.com/?sl=auto&tl=$language&text=$encoded&op=translate"
+}
+
+declare -a positional=()
+while (($#)); do
+    case $1 in
+        -h|--help) usage; exit 0 ;;
+        --version) printf '%s %s\n' "$PROGRAM" "$VERSION"; exit 0 ;;
+        -v|--verbose) verbose=true; shift ;;
+        -D|--dictionary)
+            (($# >= 2)) || die "$1 requires a file"
+            requested_dicts+=("$2")
+            shift 2
+            ;;
+        -e|--explore)
+            [[ $mode == match ]] || die 'choose only one action'
+            (($# >= 2)) || die "$1 requires a fragment"
+            mode=explore; positional+=("$2"); shift 2
+            ;;
+        -l|--lookup)
+            [[ $mode == match ]] || die 'choose only one action'
+            (($# >= 2)) || die "$1 requires a word"
+            mode=lookup; positional+=("$2"); shift 2
+            ;;
+        -t|--translate)
+            [[ $mode == match ]] || die 'choose only one action'
+            (($# >= 3)) || die "$1 requires LANG and WORD_OR_PHRASE"
+            mode=translate
+            positional+=("$2")
+            shift 2
+            while (($#)) && [[ $1 != -* ]]; do
+                positional+=("$1")
+                shift
+            done
+            ;;
+        --) shift; positional+=("$@"); break ;;
+        -*) die "unknown option: $1" ;;
+        *) positional+=("$1"); shift ;;
+    esac
+done
+
+if [[ $mode == match && ${#positional[@]} -eq 0 ]]; then
+    usage
+    exit 0
+fi
+
+case $mode in
+    match)
+        ((${#positional[@]} == 1)) || die 'matching requires exactly one PATTERN'
+        validate_dicts
+        match_words "${positional[0]}"
+        ;;
+    explore)
+        ((${#positional[@]} == 1)) || die 'explore requires exactly one FRAGMENT'
+        validate_dicts
+        explore_fragment "${positional[0]}"
+        ;;
+    lookup)
+        ((${#positional[@]} == 1)) || die 'lookup requires exactly one WORD'
+        lookup_word "${positional[0]}"
+        ;;
+    translate)
+        ((${#positional[@]} >= 2)) || die 'translate requires LANG and WORD_OR_PHRASE'
+        language=${positional[0]}
+        text=${positional[*]:1}
+        translate_text "$language" "$text"
+        ;;
+esac

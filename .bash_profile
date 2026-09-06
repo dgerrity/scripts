@@ -651,21 +651,7 @@ function _handlePortal() {
     fi
 }
 
-function dict() {
-    set -o noglob
-    local testpat=$(echo "${1}" | sed 's/[0-9]//g')
-    local pat="${1}"
-    if [[ ${#1} -ne ${#testpat} ]]; then
-	local sub=""
-	for ((i=1; i<6; i++)); do 
-	    sub="${sub}.";
-	    pat=$(echo "${pat}" | sed "s/${i}/${sub}/g")
-	done
-    fi
-    cat "${DEFAULT_DICT:-/usr/share/dict/words}" | tr '[:upper:]' '[:lower:]' | \
-	grep -x "${pat}" | sort | uniq
-    set +o noglob
-}
+# dict is now a standalone script in this repository.
 
 function dictadd() {
     head "${DEFAULT_DICT}"

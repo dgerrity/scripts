@@ -1,4 +1,6 @@
-;;; markdown-mode.el --- Major mode for Markdown-formatted text -*- lexical-binding: t; -*-
+;; -*- lexical-binding: t; -*-
+
+;;; markdown-mode.el --- Major mode for Markdown-formatted text
 
 ;; Copyright (C) 2007-2020 Jason R. Blevins and markdown-mode
 ;; contributors (see the commit log for details).

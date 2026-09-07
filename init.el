@@ -1,4 +1,6 @@
-;; $Id: init.el-v 1.4 2013-06-13 16:24:27-07 dan Exp dan $
+;; -*- lexical-binding: t; -*-
+
+;; $Id: init.el-v 1.5 2026-09-07 16:24:27-07 dan Exp dan $
 ;; $Revision: 1.4 $
 ;; $Source: /Users/dan/.emacs.d/RCS/init.el-v $
 ;; $Date: 2013-06-13 16:24:27-07 $

@@ -1,3 +1,5 @@
+;;-*- lexical-binding: t; -*-
+
 ;;; applescript-mode.el --- major mode for editing AppleScript source
 
 ;; Copyright (C) 2004  MacEmacs JP Project

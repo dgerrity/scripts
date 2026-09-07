@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t; -*-
+
 ;;; editorconfig.el --- EditorConfig Emacs extension
 
 ;; Copyright (C) 2011-2013 EditorConfig Team
